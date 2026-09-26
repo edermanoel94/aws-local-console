@@ -122,6 +122,8 @@ Special input/output encoding for streaming fields:
 - Input fields of type `io.Reader` (e.g. S3 `PutObject.Body`, Lambda `Invoke` is `[]byte Payload`) accept a string (UTF-8 text).
   `[]byte` fields accept a UTF-8 string too.
   Optionally `"<Field>Base64": "..."` may be sent for binary content.
+- Any `[]byte` field may also be given as `{"zipFiles": {"index.mjs": "export const handler = ..."}}`; the backend builds a zip archive with those files.
+  This is how the Lambda console sends inline code (`CreateFunction.Code.ZipFile`, `UpdateFunctionCode.ZipFile`).
 - Output fields of type `io.ReadCloser` (S3 `GetObject.Body`) and `[]byte` (Lambda `Invoke.Payload`) are returned as UTF-8 string when valid UTF-8, else as `{"base64": "..."}`.
 
 ```ts
