@@ -1,0 +1,13 @@
+node_modules/
+.next/
+out/
+dist/
+*.log
+.env
+.env.local
+/backend/bin/
+/playwright-report/
+/test-results/
+/blob-report/
+/playwright/.cache/
+.DS_Store

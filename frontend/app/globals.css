@@ -1,0 +1,35 @@
+@import "tailwindcss";
+
+/* AWS Management Console inspired palette. Use these tokens (bg-aws-*, text-aws-*, border-aws-*) instead of raw colors. */
+@theme {
+  --color-aws-navy: #232f3e;
+  --color-aws-navy-light: #2f3d4f;
+  --color-aws-squid: #16191f;
+  --color-aws-orange: #ff9900;
+  --color-aws-orange-dark: #ec7211;
+  --color-aws-link: #0972d3;
+  --color-aws-ink: #000716;
+  --color-aws-muted: #5f6b7a;
+  --color-aws-border: #e9ebed;
+  --color-aws-border-strong: #b6bec9;
+  --color-aws-panel: #f4f4f4;
+  --color-aws-page: #f2f3f3;
+  --color-aws-green: #037f0c;
+  --color-aws-red: #d91515;
+
+  --font-sans: var(--font-open-sans), "Helvetica Neue", Roboto, Arial, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, Menlo, monospace;
+}
+
+html,
+body {
+  background: var(--color-aws-page);
+  color: var(--color-aws-ink);
+}
+
+a {
+  color: var(--color-aws-link);
+}
+a:hover {
+  text-decoration: underline;
+}

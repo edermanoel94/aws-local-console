@@ -1,0 +1,14 @@
+services:
+  floci:
+    image: floci/floci:latest
+    ports:
+      - "4566:4566"
+    volumes:
+      # Lambda functions run as sibling containers
+      - /var/run/docker.sock:/var/run/docker.sock
+    healthcheck:
+      # The image ships no curl/wget/grep; probe with bash /dev/tcp and check the HTTP status line
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/4566 && printf 'GET /_floci/health HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && read -r status <&3 && case \"$$status\" in *200*) exit 0;; esac; exit 1"]
+      interval: 3s
+      timeout: 3s
+      retries: 40
