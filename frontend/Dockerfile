@@ -3,12 +3,15 @@
 # AWS Local Console - Next.js frontend image.
 # Multi-stage build on top of Next.js `output: "standalone"`:
 #   deps    -> installs dependencies with the pnpm version pinned in package.json (via corepack)
-#   builder -> runs `next build` (NEXT_PUBLIC_* values are inlined here)
+#   builder -> runs `next build`
 #   runner  -> minimal image with only the traced standalone server, running as non-root
+# deps and builder run on the build machine's native platform: the standalone output is plain
+# JavaScript (next.config.ts keeps native modules such as sharp out of it), so one build serves
+# every target platform of a multi-arch image without emulation. Only the runner is per-platform.
 
 ARG NODE_VERSION=24
 
-FROM node:${NODE_VERSION}-alpine AS base
+FROM --platform=$BUILDPLATFORM node:${NODE_VERSION}-alpine AS base
 ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0 \
     NEXT_TELEMETRY_DISABLED=1
 # libc6-compat helps prebuilt native modules (e.g. SWC) that expect glibc.
