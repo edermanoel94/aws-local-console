@@ -72,8 +72,15 @@ interface OperationInfo {
   mutating: boolean;          // false for List*/Get*/Describe*/Head*/Scan/Query/Receive*
   coverage: "supported" | "unsupported" | "untested";
   inputExample: Record<string, unknown>;   // sensible example input (may be {})
-  inputFields: { name: string; type: string; required: boolean }[];
+  inputFields: { name: string; type: string; required: boolean; enum?: string[] }[];
+  // type: "string" | "integer" | "long" | "double" | "boolean" | "timestamp" | "blob" | "list<T>" | "map<string,T>" | <StructureName>
+  // required: exact for top-level members (asked from the SDK's own input validator)
+  // enum: allowed values when the member is an SDK enum (or a list of enums)
 }
+// GET /api/v1/services                               -> { services: ServiceSummary[] }
+// GET /api/v1/services/:service                      -> ServiceDetail
+// GET /api/v1/services/:service/operations           -> { operations: OperationInfo[] }
+// GET /api/v1/services/:service/operations/:operation -> OperationInfo
 
 type ExecutionStatus = "success" | "error";
 type ErrorKind =
@@ -109,6 +116,7 @@ interface ExecuteResponse {
   response: {
     output?: unknown;         // SDK output struct serialized to JSON (ResultMetadata stripped)
     headers?: Record<string, string>;  // response headers from Floci
+    body?: string;            // raw error body from Floci, only when httpStatus >= 400
   };
   error?: { kind: ErrorKind; code: string; message: string };
 }
@@ -125,6 +133,19 @@ Special input/output encoding for streaming fields:
 - Any `[]byte` field may also be given as `{"zipFiles": {"index.mjs": "export const handler = ..."}}`; the backend builds a zip archive with those files.
   This is how the Lambda console sends inline code (`CreateFunction.Code.ZipFile`, `UpdateFunctionCode.ZipFile`).
 - Output fields of type `io.ReadCloser` (S3 `GetObject.Body`) and `[]byte` (Lambda `Invoke.Payload`) are returned as UTF-8 string when valid UTF-8, else as `{"base64": "..."}`.
+- `[]byte` input fields also accept `{"base64": "..."}` (symmetric with the output), and any other JSON object/array is sent as its JSON text (so `Invoke.Payload` may be a JSON object).
+- String input fields accept numbers/booleans (stringified) and JSON objects/arrays (serialized), e.g. `EventPattern`, `Policy`.
+- Member names are matched exactly, then case-insensitively; unknown members are a `validation` error listing the valid ones.
+- Timestamps in input accept RFC 3339 strings or epoch seconds.
+- Output omits absent members (nil pointers/maps, unset enums); lists are always present (`[]` when empty).
+
+Smithy unions (Go interfaces with one struct per member) use the AWS wire JSON shape in both input and output: an object with exactly one key, the member name.
+The main case is DynamoDB `AttributeValue`, everywhere it appears (`Item`, `Key`, `ExpressionAttributeValues`, `ExclusiveStartKey`, outputs `Item`, `Items`, `Attributes`, `LastEvaluatedKey`, batch and transact operations):
+`{"S":"x"}`, `{"N":"1"}`, `{"BOOL":true}`, `{"NULL":true}`, `{"L":[...]}`, `{"M":{...}}`, `{"SS":[...]}`, `{"NS":[...]}`, `{"B":"<base64>"}`, `{"BS":["<base64>"]}`.
+Binary union members (`B`, `BS`) are always base64, as on the AWS wire.
+Other registered unions: S3 `AnalyticsFilter`, `MetricsFilter`, `ObjectEncryption`; IAM `PolicyIdentifier`; CloudWatch Logs `IntegrationDetails`, `ResourceConfig`.
+New unions plug into `backend/internal/operations/unions.go`.
+None of the registered services use `document.Interface` members in their inputs.
 
 ```ts
 interface ResourceTag { key: string; value: string }
@@ -145,6 +166,22 @@ interface Resource {
 interface ResourceList { resources: Resource[]; total: number; errors: { service: string; message: string }[] }
 
 // GET /api/v1/resources/:service?region=  -> ResourceList filtered by service
+//
+// Without `region` (or with region=all) every region of /regions is scanned; S3 buckets are listed once and placed in their bucket region.
+// IAM roles are global: region "global", always included regardless of the region filter.
+// `q` matches name, ARN, type, service and tag key/value (case-insensitive); `tag` is "key=value" or just "key".
+// Attributes per type (all optional, best effort):
+//   bucket:    region, versioning
+//   queue:     url, fifo, plus every SQS attribute with a lower-camel key (queueArn, approximateNumberOfMessages, visibilityTimeout, redrivePolicy, ...)
+//   topic:     fifo, subscriptions: {subscriptionArn, protocol, endpoint}[], plus SNS topic attributes (lower-camel keys)
+//   table:     status, keySchema: {attributeName, keyType}[], attributeDefinitions: {attributeName, attributeType}[], itemCount, sizeBytes, billingMode, streamArn, globalSecondaryIndexes
+//   function:  runtime, handler, role, memorySize, timeout, codeSize, lastModified, state, packageType, description, environment (Record<string,string>)
+//   restapi:   id, description, rootResourceId, endpointType, stages: {stageName, deploymentId, invokeUrl}[]   (Resource.name is the API name; use attributes.id for API calls)
+//   api (apigatewayv2): id, protocolType, apiEndpoint
+//   event-bus: description
+//   rule:      ruleName, eventBusName, eventPattern, scheduleExpression, state, description   (Resource.name is "ruleName" on the default bus, "busName/ruleName" otherwise)
+//   log-group: retentionInDays, storedBytes, logGroupClass
+//   role:      roleId, path, description, assumeRolePolicyDocument
 
 interface Region { name: string; label: string; default: boolean }
 // GET /api/v1/regions -> { regions: Region[] }
@@ -191,15 +228,18 @@ interface ResourceEvent {
 interface ArchitectureGraph {
   nodes: { id: string; service: string; type: string; name: string; arn: string }[];    // id = Resource.id
   edges: { id: string; source: string; target: string; label: string }[];                // e.g. "event source", "subscription", "rule target", "integration", "notification"
+  errors: { service: string; message: string }[];   // partial failures while collecting (graph is still returned)
 }
 // Edges are discovered from real Floci state:
 //   Lambda event source mappings (SQS/DynamoDB stream -> Lambda), SNS subscriptions (topic -> sqs/lambda),
 //   EventBridge rule targets (rule -> target), API Gateway integrations (api -> lambda),
 //   S3 bucket notification configuration (bucket -> sqs/sns/lambda/eventbridge),
 //   Lambda environment variables referencing a known resource name (lambda -> table/queue/topic/bucket, label "env reference").
+// Additional labels: "rule" (event bus -> rule), "dead-letter" (queue -> DLQ from RedrivePolicy), "logs" (function -> /aws/lambda/<name> log group).
+// Without `region` the default region is used. IAM roles are not graph nodes.
 
 // GET /api/v1/health -> { status: "ok", version: string }
-// GET /api/v1/floci/status -> { endpoint: string; healthy: boolean; status: "Healthy" | "Unreachable"; version?: string; edition?: string; services: { id: string; status: string }[]; latencyMs: number }
+// GET /api/v1/floci/status -> { endpoint: string; healthy: boolean; status: "Healthy" | "Unreachable"; version?: string; edition?: string; services: { id: string; status: string }[]; latencyMs: number; error?: string }
 
 // GET /api/v1/dashboard -> DashboardSummary
 interface DashboardSummary {
@@ -209,7 +249,9 @@ interface DashboardSummary {
   regionCount: number;
   resourcesByService: { service: string; count: number }[];
   recentOperations: LogEntry[];   // latest 10
+  errors: { service: string; message: string }[];   // resource discovery failures
 }
+// GET /api/v1/dashboard accepts an optional ?region= (resource counts for that region; all regions by default).
 
 // POST /api/v1/cli/execute  { command: "aws s3 ls", region?: string } -> CliResult
 interface CliResult { command: string; exitCode: number; stdout: string; stderr: string; logId?: string }
@@ -230,6 +272,22 @@ Required subset:
   Flags map to PascalCase input fields (`--queue-name` -> `QueueName`); a value that parses as JSON is used as JSON.
 - `help` lists supported syntax.
 - Output: pretty JSON of the operation output on stdout (like the real AWS CLI), error text on stderr with exit code 254 for AWS errors, 252 for parse errors.
+- Additions: exit code 255 for network/internal errors; `aws s3 rm s3://bucket/key`; `aws s3 rb s3://bucket --force` (deletes objects first); `aws s3 ls s3://bucket/prefix --recursive`; `aws <service> help` and `aws <service> <operation> help`; global `--region` (overrides the request `region`) and `--output json`; aliases `s3api` -> `s3`, `eventbridge` -> `events`; structure/map flags also accept the shorthand `Key=Value,Other=Value`; `--no-<flag>` sets a boolean to false.
+- `logId` is the id of the last operation the command executed.
+
+### 3.3 API Gateway stage invoke
+
+Floci does not implement `TestInvokeMethod` (HTTP 406), so deployed REST APIs are executed through a proxy:
+
+```ts
+// POST /api/v1/apigateway/invoke   (honors X-Console-Source)
+interface ApiInvokeRequest { restApiId: string; stage: string; method?: string /* default GET */; path?: string /* e.g. "/hello?x=1" */; headers?: Record<string, string>; body?: string; region?: string }
+interface ApiInvokeResponse { status: number; headers: Record<string, string>; body: string; durationMs: number; url: string; logId: string }
+```
+
+It forwards to `{FLOCI_ENDPOINT}/restapis/{restApiId}/{stage}/_user_request_{path}` and always answers HTTP 200 with the upstream status inside (502 envelope `FlociUnreachable` only when Floci cannot be reached).
+It is audited as a LogEntry with `service: "apigateway"`, `operation: "Invoke"`, `resourceName` = restApiId (status `error` with `errorKind: "aws"` when the upstream status is >= 400) and a successful call emits a ResourceEvent of type `ApiInvoked`.
+Calling an undefined method/path returns 403 `{"message":"Missing Authentication Token"}`, like AWS.
 
 ## 4. Service registry (MVP + extras)
 
@@ -244,10 +302,32 @@ Required subset:
 | events | EventBridge | Application Integration | event-bus, rule | yes |
 | logs | CloudWatch Logs | Management | log-group | no (API Explorer only) |
 | iam | IAM | Security | role | no (API Explorer only) |
+| apigatewayv2 | API Gateway V2 | Networking | api | no (API Explorer only) |
 
 Operations are discovered by reflection on the SDK v2 client type (every exported method with signature `(ctx, *XInput, ...func(*Options)) (*XOutput, error)`), so every SDK operation is executable through the generic engine.
 Coverage per operation: `supported` once it has succeeded (or failed with a regular AWS error) against Floci, `unsupported` once Floci answered it as not implemented, `untested` otherwise.
 Coverage is kept in memory in the backend.
+Only `aws` and `unsupported` error kinds (and successes) change coverage; `validation`, `network` and `application` errors say nothing about Floci.
+
+`mutating` is false for operation names starting with List, Get, Describe, Head, Receive, Scan, Query, BatchGet, Search, Lookup, Select, Filter, Test, Validate, Estimate, Check, Detect, Preview.
+ResourceEvent types emitted: `ResourceCreated`, `ResourceDeleted`, `ResourceUpdated` (generic by Create*/Delete*/other), `ObjectUploaded`, `ObjectDeleted`, `MessageSent`, `MessageDeleted`, `QueuePurged`, `MessagePublished`, `SubscriptionCreated`, `SubscriptionDeleted`, `ItemWritten`, `ItemDeleted`, `FunctionInvoked`, `TargetsAdded`, `TargetsRemoved`, `EventPublished`, `ApiDeployed`, `ApiInvoked`, `LogEventsWritten`.
+`events.PutRule` emits `ResourceCreated`.
+
+### 4.1 Floci behavior notes (verified against Floci 2.1.0 community)
+
+- Duplicate `CreateBucket` in **us-east-1** for a bucket already in us-east-1 returns **HTTP 200** (no error), exactly like real AWS (legacy us-east-1 behavior).
+  In any other case (request region other than us-east-1, or the bucket lives in another region) it returns HTTP 409 `BucketAlreadyOwnedByYou` ("Your previous request to create the named bucket succeeded and you already own it.").
+  A UI flow that must show the duplicate-bucket error has to create the bucket in a region other than us-east-1 (e.g. us-east-2), or check existence first.
+- `CreateBucket` in a non us-east-1 region works with or without `CreateBucketConfiguration`; sending `LocationConstraint: "us-east-1"` fails with `InvalidLocationConstraint`.
+- Unimplemented operations (classified `unsupported`): JSON protocols answer HTTP 400 `UnknownOperationException` / `UnsupportedOperation`; query protocols answer 400 `UnsupportedOperation` or `InvalidAction`; REST protocols answer 404 with an HTML body, 405/406 with an empty body (e.g. API Gateway `GetClientCertificates`, `TestInvokeMethod`), or `UnknownOperationException`; S3 answers 501 `NotImplemented`.
+  Good examples for tests: `dynamodb DescribeContributorInsights`, `sns GetSMSSandboxAccountStatus`, `events ListEndpoints`, `logs DescribeDeliveries`, `iam GetAccountAuthorizationDetails`, `lambda ListCodeSigningConfigs`.
+- SQS queue URLs have no region: `http://localhost:4566/000000000000/<queue>`.
+- Lambda: runtimes nodejs20.x/22.x, python3.12/3.13, java21, ruby3.3, provided.al2023, go1.x are accepted; functions run in sibling Docker containers (first invoke of a runtime pulls its image; later invokes take ~100 ms).
+  Floci injects `AWS_ENDPOINT_URL=http://localhost.floci.io:4566` (plus `FLOCI_ENDPOINT`, `FLOCI_HOSTNAME`, `AWS_REGION`, credentials) into the function environment, so the AWS SDK inside a Lambda reaches Floci DynamoDB/SQS/S3 with a plain `new DynamoDBClient({})`; no endpoint configuration is needed in function code.
+  `Invoke` with `LogType: "Tail"` does not return `LogResult`.
+  Function error messages come as `{"__type": ..., "message": ...}`; the backend reads the message from the raw body.
+- API Gateway: invoke URL format `{FLOCI_ENDPOINT}/restapis/{restApiId}/{stage}/_user_request_/{path}` (AWS_PROXY Lambda and MOCK integrations work); `GetResources` never returns `resourceMethods` (not even with `embed=methods`), use `GetMethod`/`GetIntegration`.
+- S3 -> EventBridge: `PutBucketNotificationConfiguration` with `EventBridgeConfiguration: {}` delivers `source: "aws.s3"`, `detail-type: "Object Created"` events to the default bus of the bucket region.
 
 ## 5. Frontend routes
 
