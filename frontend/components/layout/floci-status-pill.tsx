@@ -20,7 +20,7 @@ export function FlociStatusPill() {
     <Link
       href="/settings"
       title={title}
-      className="flex h-8 items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 text-xs text-white no-underline hover:border-white/40 hover:bg-white/10"
+      className="flex h-8 items-center gap-2 rounded-full border border-white/15 bg-white/5 px-2.5 text-xs whitespace-nowrap sm:px-3 text-white no-underline hover:border-white/40 hover:bg-white/10"
     >
       <span className="font-bold">Floci</span>
       <span className="relative flex size-2" aria-hidden>
@@ -34,7 +34,7 @@ export function FlociStatusPill() {
           )}
         />
       </span>
-      <span className={cn(state === "healthy" ? "text-emerald-300" : state === "checking" ? "text-gray-300" : "text-red-300")}>{text}</span>
+      <span className={cn("sr-only sm:not-sr-only", state === "healthy" ? "text-emerald-300" : state === "checking" ? "text-gray-300" : "text-red-300")}>{text}</span>
     </Link>
   );
 }

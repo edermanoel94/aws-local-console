@@ -89,6 +89,12 @@ export function ItemsExplorer({ table }: { table: TableDescription }) {
   const result = useAwsQuery<{ Items?: DynamoItem[] | null; Count?: number; ScannedCount?: number }>("dynamodb", operation, buildInput(table, request));
   const items = result.data?.Items ?? [];
 
+  // Running the same request again must hit Floci again: an unchanged query key would otherwise serve the cached result.
+  const run = (next: Request) => {
+    if (JSON.stringify(next) === JSON.stringify(request)) void result.refetch();
+    else setRequest(next);
+  };
+
   const keyNames = [keys.partition.name, ...(keys.sort ? [keys.sort.name] : [])];
   const otherNames = [...new Set(items.flatMap((i) => Object.keys(i)))].filter((n) => !keyNames.includes(n)).sort();
   const columns = [...keyNames, ...otherNames.slice(0, 10)];
@@ -98,7 +104,7 @@ export function ItemsExplorer({ table }: { table: TableDescription }) {
       <Panel title="Scan or query items">
         <form
           noValidate
-          onSubmit={form.handleSubmit((v) => setRequest(v.mode === "scan" ? { mode: "scan" } : { mode: "query", partitionValue: v.partitionValue, sortOperator: v.sortOperator, sortValue: v.sortValue, sortValueEnd: v.sortValueEnd }))}
+          onSubmit={form.handleSubmit((v) => run(v.mode === "scan" ? { mode: "scan" } : { mode: "query", partitionValue: v.partitionValue, sortOperator: v.sortOperator, sortValue: v.sortValue, sortValueEnd: v.sortValueEnd }))}
           className="flex flex-col gap-4"
         >
           <SegmentedControl

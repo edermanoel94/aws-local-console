@@ -20,7 +20,7 @@ export function RegionSelector() {
 
   return (
     <div className="flex items-center gap-2">
-      <label htmlFor={id} className="flex items-center gap-1 text-xs text-gray-300">
+      <label htmlFor={id} className="sr-only items-center gap-1 text-xs text-gray-300 lg:not-sr-only lg:flex">
         <Globe className="size-3.5" aria-hidden />
         Region
       </label>

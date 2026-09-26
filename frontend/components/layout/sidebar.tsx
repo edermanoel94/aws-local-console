@@ -10,7 +10,20 @@ import { useServices } from "@/hooks/use-queries";
 import { ServiceIcon, SERVICE_SHORT_NAMES } from "@/components/aws/service-icon";
 import { NAV_ITEMS, isActive } from "./navigation";
 
-export function Sidebar({ collapsed }: { collapsed: boolean }) {
+/**
+ * "auto" follows the viewport through CSS only (icons below 1280px, full width above), so the
+ * server-rendered first paint is already correct; "expanded"/"collapsed" are explicit user choices.
+ */
+export type SidebarMode = "auto" | "expanded" | "collapsed";
+
+const MODE_CLASSES: Record<SidebarMode, { aside: string; link: string; label: string; expandedOnly: string }> = {
+  auto: { aside: "w-14 xl:w-56", link: "justify-center px-0 xl:justify-start xl:px-3", label: "sr-only xl:not-sr-only", expandedOnly: "hidden xl:block" },
+  expanded: { aside: "w-56", link: "", label: "", expandedOnly: "" },
+  collapsed: { aside: "w-14", link: "justify-center px-0", label: "sr-only", expandedOnly: "hidden" },
+};
+
+export function Sidebar({ mode }: { mode: SidebarMode }) {
+  const classes = MODE_CLASSES[mode];
   const pathname = usePathname();
   const hydrated = useHydrated();
   const favorites = usePreferences((s) => s.favorites);
@@ -21,7 +34,7 @@ export function Sidebar({ collapsed }: { collapsed: boolean }) {
     <aside
       className={cn(
         "sticky top-12 flex h-[calc(100vh-3rem)] shrink-0 flex-col overflow-y-auto border-r border-aws-border bg-white transition-[width] duration-150",
-        collapsed ? "w-14" : "w-56",
+        classes.aside,
       )}
     >
       <nav aria-label="Main" className="px-2 py-3">
@@ -34,16 +47,16 @@ export function Sidebar({ collapsed }: { collapsed: boolean }) {
                 <Link
                   href={item.href}
                   aria-current={active ? "page" : undefined}
-                  title={collapsed ? item.label : undefined}
+                  title={mode === "expanded" ? undefined : item.label}
                   className={cn(
                     "relative flex h-9 items-center gap-3 rounded-lg px-3 text-sm no-underline transition-colors",
                     active ? "bg-blue-50 font-bold text-aws-link" : "text-aws-ink hover:bg-aws-panel",
-                    collapsed && "justify-center px-0",
+                    classes.link,
                   )}
                 >
                   {active && <span className="absolute top-1.5 bottom-1.5 left-0 w-[3px] rounded-full bg-aws-link" aria-hidden />}
                   <Icon className={cn("size-4 shrink-0", active ? "text-aws-link" : "text-aws-muted")} aria-hidden />
-                  <span className={cn(collapsed && "sr-only")}>{item.label}</span>
+                  <span className={classes.label}>{item.label}</span>
                 </Link>
               </li>
             );
@@ -51,8 +64,7 @@ export function Sidebar({ collapsed }: { collapsed: boolean }) {
         </ul>
       </nav>
 
-      {!collapsed && (
-        <nav aria-label="Favorites" className="border-t border-aws-border px-2 py-3">
+      <nav aria-label="Favorites" className={cn("border-t border-aws-border px-2 py-3", classes.expandedOnly)}>
           <p className="flex items-center gap-1.5 px-3 pb-1.5 text-xs font-bold tracking-wide text-aws-muted uppercase">
             <Star className="size-3" aria-hidden /> Favorites
           </p>
@@ -81,10 +93,9 @@ export function Sidebar({ collapsed }: { collapsed: boolean }) {
               })}
             </ul>
           )}
-        </nav>
-      )}
+      </nav>
 
-      <div className={cn("mt-auto border-t border-aws-border px-5 py-3 text-[11px] text-aws-muted", collapsed && "hidden")}>
+      <div className={cn("mt-auto border-t border-aws-border px-5 py-3 text-[11px] text-aws-muted", classes.expandedOnly)}>
         Running on <span className="font-bold text-aws-ink">Floci</span> · local AWS
       </div>
     </aside>
