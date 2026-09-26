@@ -1,18 +1,20 @@
 # AWS Local Console - developer and CI entry points.
 #
-# Host ports can be overridden per invocation, e.g. `make up API_PORT=18080 WEB_PORT=13000`.
+# Host ports can be overridden per invocation, e.g. `make up WEB_PORT=13000`.
 # The same variables are read by docker-compose.yml.
 
 SHELL := /bin/sh
 
 FLOCI_PORT ?= 4566
-API_PORT ?= 8080
 WEB_PORT ?= 3000
-export FLOCI_PORT API_PORT WEB_PORT
+export FLOCI_PORT WEB_PORT
 
 FLOCI_URL := http://localhost:$(FLOCI_PORT)
-API_URL := http://localhost:$(API_PORT)
 WEB_URL := http://localhost:$(WEB_PORT)
+# In the container the API is reached through the web server's /api/v1 proxy.
+API_URL := $(WEB_URL)
+# Port of the Go API when it runs on the host (dev-backend / dev-frontend).
+DEV_API_PORT ?= 8080
 
 # Seconds to wait for each service to become healthy.
 WAIT_TIMEOUT ?= 180
@@ -27,6 +29,13 @@ PNPM ?= $(shell command -v pnpm >/dev/null 2>&1 && echo pnpm || echo corepack pn
 COMPOSE ?= docker compose
 WAIT_FOR := ./scripts/wait-for.sh
 
+# Published image (Go API + web console): $(IMAGE) on Docker Hub.
+IMAGE_NAMESPACE ?= edercosta
+IMAGE := $(IMAGE_NAMESPACE)/aws-local-console
+RELEASE_PLATFORMS ?= amd64 arm64
+# Release version without the leading "v"; defaults to the tag on HEAD (e.g. v1.2.3 -> 1.2.3).
+VERSION ?= $(shell git describe --tags --exact-match 2>/dev/null | sed 's/^v//')
+
 # Lambda functions are sibling containers started by Floci and labelled floci=true.
 # Only the ones attached to this stack's network are removed, so other Floci instances are left alone.
 define remove_lambda_containers
@@ -37,7 +46,7 @@ endef
 .DEFAULT_GOAL := help
 
 .PHONY: help up down logs build wait e2e e2e-ui e2e-report e2e-install clean \
-	dev-floci dev-backend dev-frontend deps
+	dev-floci dev-backend dev-frontend deps release
 
 help: ## Show available targets
 	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z0-9_-]+:.*## / {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -46,7 +55,7 @@ help: ## Show available targets
 # Full stack (Docker Compose)
 # ---------------------------------------------------------------------------
 
-up: ## Build and start Floci, Go API and Next.js, then wait until healthy
+up: ## Build and start Floci and the console image, then wait until healthy
 	$(COMPOSE) up -d --build --wait
 	@$(MAKE) --no-print-directory wait
 	@echo "AWS Local Console is running at $(WEB_URL)"
@@ -59,13 +68,12 @@ down: ## Stop the stack (keeps volumes)
 logs: ## Follow logs of all services
 	$(COMPOSE) logs -f
 
-build: ## Build the backend and frontend images
+build: ## Build the console image (Go API + Next.js)
 	$(COMPOSE) build
 
-wait: ## Wait for Floci, the Go API and Next.js to answer
+wait: ## Wait for Floci and the console (web server and API) to answer
 	@$(WAIT_FOR) $(FLOCI_URL)/_floci/health $(WAIT_TIMEOUT) Floci
-	@$(WAIT_FOR) $(API_URL)/api/v1/health $(WAIT_TIMEOUT) "Go API"
-	@$(WAIT_FOR) $(WEB_URL)/ $(WAIT_TIMEOUT) Next.js
+	@$(WAIT_FOR) $(WEB_URL)/api/v1/health $(WAIT_TIMEOUT) "Console (web + API)"
 
 # ---------------------------------------------------------------------------
 # End-to-end tests (Playwright, run from the repository root)
@@ -106,7 +114,25 @@ dev-floci: ## Start only Floci and wait until it is healthy
 dev-backend: ## Run the Go API on the host against Floci (go run)
 	cd backend && \
 		FLOCI_ENDPOINT=$(FLOCI_URL) AWS_REGION=us-east-1 AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test \
-		PORT=$(API_PORT) CORS_ORIGINS=$(WEB_URL) go run ./cmd/api
+		PORT=$(DEV_API_PORT) CORS_ORIGINS=$(WEB_URL) go run ./cmd/api
 
 dev-frontend: ## Run the Next.js dev server on the host
-	cd frontend && API_INTERNAL_URL=$(API_URL) PORT=$(WEB_PORT) $(PNPM) dev
+	cd frontend && API_INTERNAL_URL=http://localhost:$(DEV_API_PORT) PORT=$(WEB_PORT) $(PNPM) dev
+
+# Publishes the multi-arch image from this machine (CI does the same in .github/workflows/release.yml).
+# Each platform is built with the default builder (no emulation, see the Dockerfile, and no extra
+# buildkit volume), pushed as <version>-<arch>, then joined into one multi-arch <version> and latest.
+# Requires `docker login` as $(IMAGE_NAMESPACE).
+release: ## Build and push the multi-arch image to Docker Hub (VERSION=1.2.3, default: tag on HEAD)
+	@case "$(VERSION)" in [0-9]*.[0-9]*.[0-9]*) ;; *) echo "VERSION must be semver like 1.2.3 (got '$(VERSION)'); tag HEAD with v<version> or pass VERSION=" >&2; exit 1;; esac
+	@test -z "$$(git status --porcelain)" || { echo "Working tree is dirty; commit before releasing" >&2; exit 1; }
+	@set -e; image=$(IMAGE); refs=""; \
+	for arch in $(RELEASE_PLATFORMS); do \
+		echo "==> $$image:$(VERSION)-$$arch"; \
+		docker buildx build --builder default --platform linux/$$arch --build-arg VERSION=$(VERSION) \
+			--label org.opencontainers.image.revision=$$(git rev-parse HEAD) \
+			--tag $$image:$(VERSION)-$$arch --push .; \
+		refs="$$refs $$image:$(VERSION)-$$arch"; \
+	done; \
+	echo "==> $$image:$(VERSION) and latest"; \
+	docker buildx imagetools create --tag $$image:$(VERSION) --tag $$image:latest $$refs

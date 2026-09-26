@@ -1,0 +1,16 @@
+# Allow-list: only what the image build needs enters the context.
+*
+!backend/
+!frontend/
+!docker/
+
+# Build output and dependencies are always recreated inside the image.
+**/node_modules
+frontend/.next
+frontend/out
+frontend/*.tsbuildinfo
+frontend/next-env.d.ts
+backend/bin
+**/.env*
+**/.DS_Store
+**/*.log

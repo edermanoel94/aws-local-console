@@ -2,7 +2,8 @@
  * Best-effort cleanup through the Go API (CONTRACT section 7: allowed in afterAll only).
  * Never throws: cleanup problems must not fail a test run.
  */
-const API_URL = process.env.API_URL ?? "http://localhost:8080";
+// The console image serves the API behind its web port (/api/v1 proxy); API_URL can point at a host-run API instead.
+const API_URL = process.env.API_URL ?? process.env.BASE_URL ?? "http://localhost:3000";
 
 export async function executeForCleanup(service: string, operation: string, input: Record<string, unknown>, region = "us-east-1"): Promise<unknown> {
   try {

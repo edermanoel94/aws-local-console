@@ -2,9 +2,11 @@ name: E2E
 
 on:
   push:
-    branches: [main]
+    branches: [master]
   pull_request:
   workflow_dispatch:
+  # Reused by release.yml: images are only published after this suite passes.
+  workflow_call:
 
 concurrency:
   group: e2e-${{ github.ref }}
@@ -17,7 +19,6 @@ env:
   CI: "true"
   COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
   FLOCI_PORT: "4566"
-  API_PORT: "8080"
   WEB_PORT: "3000"
 
 jobs:
@@ -28,10 +29,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: 24
 
@@ -39,7 +40,7 @@ jobs:
         run: corepack enable pnpm && pnpm --version
 
       - name: Setup Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7
         with:
           go-version-file: backend/go.mod
           cache-dependency-path: backend/go.sum
@@ -72,13 +73,13 @@ jobs:
         env:
           TEST_RUN_ID: gh-${{ github.run_id }}-${{ github.run_attempt }}
           BASE_URL: http://localhost:${{ env.WEB_PORT }}
-          API_URL: http://localhost:${{ env.API_PORT }}
+          API_URL: http://localhost:${{ env.WEB_PORT }}
           FLOCI_ENDPOINT: http://localhost:${{ env.FLOCI_PORT }}
         run: pnpm exec playwright test
 
       - name: Upload Playwright report
         if: ${{ always() }}
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-report
           path: playwright-report/
@@ -87,7 +88,7 @@ jobs:
 
       - name: Upload test results (screenshots, videos, traces)
         if: ${{ always() }}
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: test-results
           path: test-results/
@@ -102,7 +103,7 @@ jobs:
 
       - name: Upload Docker Compose logs
         if: ${{ failure() }}
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: compose-logs
           path: compose-logs.txt

@@ -5,46 +5,60 @@ It uses [Floci](https://github.com/floci-io/floci) as the local AWS runtime, so 
 
 You can list, create, inspect, edit and delete resources, run arbitrary AWS operations, inspect requests and responses, browse logs and events, and explore relationships between resources.
 
+## Run the published images
+
+No checkout or build needed: download [`compose.release.yaml`](compose.release.yaml) and start it.
+It runs Floci plus the published [`edercosta/aws-local-console`](https://hub.docker.com/r/edercosta/aws-local-console) image, a single image with the Go API and the web console (linux/amd64 and linux/arm64).
+
+```bash
+docker compose -f compose.release.yaml up -d --wait
+```
+
+Then open http://localhost:3000.
+Pin a version with `AWS_LOCAL_CONSOLE_VERSION=1.2.3` (default `latest`), and change host ports with `WEB_PORT` and `FLOCI_PORT`.
+Stop it with `docker compose -f compose.release.yaml down`.
+
 ## Architecture
 
 ```text
-            Browser
-               |
-               v
-  +---------------------------+
-  |  Next.js (frontend/)      |  http://localhost:3000
-  |  App Router, React,       |
-  |  TanStack Query, Zustand, |
-  |  Monaco, React Flow,      |
-  |  xterm.js                 |
-  +-------------+-------------+
-                | HTTP (browser -> API, CORS)
-                v
-  +---------------------------+
-  |  Go API (backend/)        |  http://localhost:8080
-  |  Service Registry,        |
-  |  Operation Engine,        |
-  |  Resource Explorer, Audit |
-  +-------------+-------------+
-                | AWS SDK for Go v2
-                v
-  +---------------------------+
-  |  Floci (floci/floci)      |  http://localhost:4566
-  |  S3, SQS, SNS, DynamoDB,  |
-  |  Lambda, API Gateway,     |
-  |  EventBridge, ...         |
-  +-------------+-------------+
-                | Docker socket
-                v
-      Lambda runtime containers
-      (siblings on the same Docker network)
+              Browser
+                 |  http://localhost:3000 (the only published port)
+                 v
+  +-- console image: edercosta/aws-local-console ---+
+  |                                                 |
+  |   +-----------------------------------------+   |
+  |   |  Next.js (frontend/)                    |   |
+  |   |  App Router, React, TanStack Query,     |   |
+  |   |  Zustand, Monaco, React Flow, xterm.js  |   |
+  |   +--------------------+--------------------+   |
+  |                        | /api/v1 proxy          |
+  |                        v 127.0.0.1:8080         |
+  |   +-----------------------------------------+   |
+  |   |  Go API (backend/)                      |   |
+  |   |  Service Registry, Operation Engine,    |   |
+  |   |  Resource Explorer, Audit               |   |
+  |   +--------------------+--------------------+   |
+  |                        |                        |
+  +------------------------|------------------------+
+                           | AWS SDK for Go v2
+                           v
+  +-------------------------------------------------+
+  |  Floci (floci/floci)     http://localhost:4566  |
+  |  S3, SQS, SNS, DynamoDB, Lambda, API Gateway,   |
+  |  EventBridge, ...                               |
+  +------------------------+------------------------+
+                           | Docker socket
+                           v
+                Lambda runtime containers
+             (siblings on the same Docker network)
 
 
   Playwright (tests/e2e/) -> Browser -> Next.js -> Go API -> Floci
 ```
 
+The Go API and the Next.js server ship together in one image (root [`Dockerfile`](Dockerfile)); [`docker/entrypoint.mjs`](docker/entrypoint.mjs) starts both and stops the container if the API dies.
 The browser only talks to Next.js: it calls `/api/v1/*` on the same origin, and a Next.js route handler proxies those requests to the Go API (`API_INTERNAL_URL`, read at runtime).
-So the console works however it is opened (localhost, 127.0.0.1, a LAN IP, a tunnel or another device), with no CORS setup and no API URL baked into the frontend image.
+So the console works however it is opened (localhost, 127.0.0.1, a LAN IP, a tunnel or another device), with no CORS setup and no API URL baked into the image.
 The shared contract between the three parts lives in [docs/CONTRACT.md](docs/CONTRACT.md), and the product specification in [SPEC.md](SPEC.md).
 
 ## Requirements
@@ -61,7 +75,7 @@ The shared contract between the three parts lives in [docs/CONTRACT.md](docs/CON
 make up
 ```
 
-This builds the images, starts Floci, the Go API and the Next.js app, and waits until all of them are healthy.
+This builds the console image (Go API + Next.js), starts it with Floci, and waits until both are healthy.
 Then open http://localhost:3000.
 
 Other stack commands:
@@ -71,8 +85,8 @@ Other stack commands:
 | `make up` | Build and start the full stack, then wait for health |
 | `make down` | Stop the stack and remove leftover Lambda containers (volumes are kept) |
 | `make logs` | Follow the logs of all services |
-| `make build` | Build the backend and frontend images |
-| `make wait` | Wait for Floci, the API and the web app to answer |
+| `make build` | Build the console image |
+| `make wait` | Wait for Floci and the console (web server and API) to answer |
 | `make clean` | Remove containers, volumes, Lambda containers and test artifacts |
 | `make help` | List all targets |
 
@@ -87,7 +101,7 @@ make dev-frontend   # pnpm dev (Next.js) against http://localhost:8080
 ```
 
 Run `make dev-backend` and `make dev-frontend` in separate terminals.
-Floci health can be checked at http://localhost:4566/_floci/health and the API health at http://localhost:8080/api/v1/health.
+Floci health can be checked at http://localhost:4566/_floci/health and the API health at http://localhost:8080/api/v1/health (in Docker, through the console at http://localhost:3000/api/v1/health).
 
 Equivalent manual commands:
 
@@ -130,18 +144,26 @@ Host ports are configurable, which helps when a default port is already taken:
 | Variable | Default | Used for |
 |---|---|---|
 | `FLOCI_PORT` | `4566` | Floci host port |
-| `API_PORT` | `8080` | Go API host port (for tests and direct API use; the console reaches the API through Next.js) |
 | `WEB_PORT` | `3000` | Next.js host port |
 
 Pass them to Make or export them before calling Docker Compose:
 
 ```bash
-make up API_PORT=18080 WEB_PORT=13000
-make e2e API_PORT=18080 WEB_PORT=13000
-API_PORT=18080 WEB_PORT=13000 docker compose up -d --build --wait
+make up WEB_PORT=13000
+make e2e WEB_PORT=13000
+WEB_PORT=13000 docker compose up -d --build --wait
 ```
 
-Go API environment variables:
+Console image environment variables (defaults already suit Compose):
+
+| Variable | Default | Description |
+|---|---|---|
+| `FLOCI_ENDPOINT` | `http://floci:4566` | Floci endpoint as seen from the container |
+| `PORT` | `3000` | Port the web console listens on (the published port) |
+| `API_PORT` | `8080` | Internal port of the Go API inside the container (not published) |
+| `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | `us-east-1`, `test`, `test` | Region and credentials used against Floci |
+
+Go API environment variables (when running it on the host):
 
 | Variable | Default | Description |
 |---|---|---|
@@ -152,11 +174,11 @@ Go API environment variables:
 | `PORT` | `8080` | Port the API listens on |
 | `CORS_ORIGINS` | `http://localhost:3000` | Origins allowed to call the API directly from a browser (not needed by the console) |
 
-Frontend environment variables:
+Frontend environment variables (when running it on the host):
 
 | Variable | Default | Description |
 |---|---|---|
-| `API_INTERNAL_URL` | `http://localhost:8080` | Go API URL as seen by the Next.js server, read at runtime (`http://backend:8080` in Compose) |
+| `API_INTERNAL_URL` | `http://localhost:8080` | Go API URL as seen by the Next.js server, read at runtime (set by the entrypoint in the image) |
 
 Playwright environment variables:
 
@@ -172,6 +194,25 @@ Compose pins the network name to `aws-local-console` and passes it to Floci with
 Inside a Lambda, `AWS_ENDPOINT_URL` points to `http://localhost.floci.io:4566`, which the Floci embedded DNS resolves to the Floci container.
 `FLOCI_HOSTNAME` is intentionally not set, so resource URLs returned by Floci (for example SQS queue URLs) stay usable from the host.
 Lambda containers are labelled `floci=true`, and `make down` and `make clean` remove any leftovers.
+
+## Releasing
+
+The image is published to Docker Hub as `edercosta/aws-local-console`, for linux/amd64 and linux/arm64, with the tags `<version>`, `<major>.<minor>` and `latest`.
+The Dockerfile cross-builds on the build machine's native platform, so no emulation (QEMU) is needed for arm64.
+
+From CI (preferred): push a tag such as `v1.2.3`.
+[`.github/workflows/release.yml`](.github/workflows/release.yml) runs the full E2E suite and only then builds and pushes the image, with SBOM and provenance attestations.
+It needs the repository secrets `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` (a Docker Hub access token, not the password).
+
+From a workstation: after `docker login`, tag the release commit and run `make release`.
+
+```bash
+git tag v1.2.3
+make release            # or: make release VERSION=1.2.3
+```
+
+`make release` builds each platform separately and pushes `<version>-<arch>` tags, then joins them into the multi-arch `<version>` and `latest` tags.
+It refuses to run with a dirty working tree or a non-semver version.
 
 ## Project structure
 
@@ -194,3 +235,7 @@ Lambda containers are labelled `floci=true`, and `make down` and `make clean` re
 ├── Makefile                 Developer and CI entry points
 └── SPEC.md                  Product specification
 ```
+
+## License
+
+[MIT](LICENSE)

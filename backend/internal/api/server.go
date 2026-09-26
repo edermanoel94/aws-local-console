@@ -22,8 +22,9 @@ import (
 	"github.com/edermanoel/aws-dash-local/backend/internal/services"
 )
 
-// Version is the API version reported by /health.
-const Version = "0.1.0"
+// Version is the API version reported by /health. Release builds set it with
+// -ldflags "-X github.com/edermanoel/aws-dash-local/backend/internal/api.Version=<version>".
+var Version = "dev"
 
 // Dependencies are the components the HTTP layer uses.
 type Dependencies struct {

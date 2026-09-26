@@ -1,0 +1,49 @@
+# AWS Local Console - run the published images, no source checkout or build needed.
+#
+#   docker compose -f compose.release.yaml up -d --wait
+#   open http://localhost:3000
+#
+# Optional settings (environment variables or an .env file next to this file):
+#   AWS_LOCAL_CONSOLE_VERSION  image tag to run (default: latest), e.g. 1.2.3
+#   WEB_PORT (3000), FLOCI_PORT (4566)  host ports
+#
+# edercosta/aws-local-console is a single image with the Go API and the web
+# console; the browser calls /api/v1 on the web port, which the web server
+# proxies to the API inside the container, so it works from any host name.
+# Lambda functions run as sibling containers that Floci starts through the
+# Docker socket, on the network named below.
+
+name: aws-local-console
+
+services:
+  floci:
+    image: floci/floci:2.1.0
+    restart: unless-stopped
+    ports:
+      - "${FLOCI_PORT:-4566}:4566"
+    environment:
+      FLOCI_SERVICES_LAMBDA_DOCKER_NETWORK: aws-local-console
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    healthcheck:
+      # The Floci image ships no curl/wget/grep; probe with bash /dev/tcp and check the HTTP status line.
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/4566 && printf 'GET /_floci/health HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && read -r status <&3 && case \"$$status\" in *200*) exit 0;; esac; exit 1"]
+      interval: 3s
+      timeout: 3s
+      retries: 40
+
+  console:
+    image: edercosta/aws-local-console:${AWS_LOCAL_CONSOLE_VERSION:-latest}
+    # The container exits if its API process dies; come back automatically.
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    environment:
+      FLOCI_ENDPOINT: http://floci:4566
+    depends_on:
+      floci:
+        condition: service_healthy
+
+networks:
+  default:
+    name: aws-local-console

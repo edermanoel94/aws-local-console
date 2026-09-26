@@ -4,7 +4,7 @@
  * The browser only ever talks to the Next.js origin (`/api/v1/*`), and this handler forwards the
  * request to the Go API. That keeps the console working however it is opened (localhost, 127.0.0.1,
  * a LAN IP, a tunnel or port forward) without CORS, and lets one image run in any environment:
- * the upstream is read at request time from API_INTERNAL_URL (e.g. http://backend:8080 in Compose).
+ * the upstream is read at request time from API_INTERNAL_URL (set by docker/entrypoint.mjs in the console image).
  */
 
 const API_INTERNAL_URL = process.env.API_INTERNAL_URL ?? "http://localhost:8080";

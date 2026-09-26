@@ -6,11 +6,13 @@ If a change to the contract is needed, update this file in the same change and k
 
 ## 1. Runtime topology
 
-| Component | Dev URL | Compose service |
+| Component | Dev URL (host) | Compose service |
 |---|---|---|
-| Floci | `http://localhost:4566` (health: `GET /_floci/health`) | `floci` (image `floci/floci:latest`, needs `/var/run/docker.sock` mounted for Lambda) |
-| Go API | `http://localhost:8080` | `backend` |
-| Next.js | `http://localhost:3000` | `frontend` |
+| Floci | `http://localhost:4566` (health: `GET /_floci/health`) | `floci` (image `floci/floci:2.1.0`, needs `/var/run/docker.sock` mounted for Lambda) |
+| Go API | `http://localhost:8080` | `console` (same container as Next.js, `127.0.0.1:8080`, not published) |
+| Next.js | `http://localhost:3000` | `console` (image `edercosta/aws-local-console`, port 3000) |
+
+The Go API and Next.js ship as one image (root `Dockerfile`); `docker/entrypoint.mjs` runs the API as a child process on `API_PORT` and exits the container if it dies.
 
 Backend environment variables:
 
@@ -23,7 +25,7 @@ PORT=8080
 CORS_ORIGINS=http://localhost:3000
 ```
 
-Frontend environment variable: `API_INTERNAL_URL` (default `http://localhost:8080`; `http://backend:8080` in Compose), read at runtime.
+Frontend environment variable: `API_INTERNAL_URL` (default `http://localhost:8080`; set to `http://127.0.0.1:${API_PORT}` by the image entrypoint), read at runtime.
 The browser never calls the Go API directly: it calls `/api/v1/*` on the Next.js origin, and the route handler `frontend/app/api/v1/[...path]/route.ts` proxies the request to `API_INTERNAL_URL`.
 This keeps the console working from any host name, IP, tunnel or device without CORS, and the frontend image carries no environment-specific URL.
 When the Go API cannot be reached, the proxy answers 502 with the error envelope and code `ApiUnreachable`.
