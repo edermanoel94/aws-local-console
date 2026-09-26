@@ -22,16 +22,21 @@ interface SqsMessage {
   MessageAttributes?: Record<string, { DataType: string; StringValue?: string }> | null;
 }
 
-export function SendReceive({ queueName, queueUrl }: { queueName: string; queueUrl: string }) {
+export function SendReceive({ queueName, queueUrl, contentBasedDeduplication }: { queueName: string; queueUrl: string; contentBasedDeduplication: boolean }) {
   return (
     <div className="flex flex-col gap-4">
-      <SendMessagePanel queueName={queueName} queueUrl={queueUrl} />
+      {/* Remount when the deduplication mode changes so the validation schema follows the queue configuration. */}
+      <SendMessagePanel key={String(contentBasedDeduplication)} queueName={queueName} queueUrl={queueUrl} contentBasedDeduplication={contentBasedDeduplication} />
       <ReceiveMessagesPanel queueUrl={queueUrl} />
     </div>
   );
 }
 
-const sendSchema = (fifo: boolean) =>
+/**
+ * FIFO queues need a message group ID, and a deduplication ID unless the queue has content-based deduplication
+ * (SQS rejects the message with InvalidParameterValue otherwise), so both are validated before sending.
+ */
+const sendSchema = (fifo: boolean, contentBasedDeduplication: boolean) =>
   z
     .object({
       body: z.string().min(1, "Enter a message body."),
@@ -39,14 +44,18 @@ const sendSchema = (fifo: boolean) =>
       deduplicationId: z.string().trim(),
       delaySeconds: optionalInt(0, 900, "Delivery delay"),
     })
-    .refine((v) => !fifo || v.groupId !== "", { path: ["groupId"], message: "Message group ID is required for FIFO queues." });
+    .refine((v) => !fifo || v.groupId !== "", { path: ["groupId"], message: "Message group ID is required for FIFO queues." })
+    .refine((v) => !fifo || contentBasedDeduplication || v.deduplicationId !== "", {
+      path: ["deduplicationId"],
+      message: "Message deduplication ID is required because content-based deduplication is disabled for this queue.",
+    });
 
 type SendValues = z.infer<ReturnType<typeof sendSchema>>;
 
-function SendMessagePanel({ queueName, queueUrl }: { queueName: string; queueUrl: string }) {
+function SendMessagePanel({ queueName, queueUrl, contentBasedDeduplication }: { queueName: string; queueUrl: string; contentBasedDeduplication: boolean }) {
   const fifo = isFifo(queueName);
   const [attributes, setAttributes] = useState<KeyValue[]>([]);
-  const form = useForm<SendValues>({ resolver: zodResolver(sendSchema(fifo)), defaultValues: { body: "", groupId: "", deduplicationId: "", delaySeconds: "" } });
+  const form = useForm<SendValues>({ resolver: zodResolver(sendSchema(fifo, contentBasedDeduplication)), defaultValues: { body: "", groupId: "", deduplicationId: "", delaySeconds: "" } });
 
   const send = useConsoleAction<SendValues, { MessageId?: string }>({
     run: (v, exec) => {
@@ -73,7 +82,12 @@ function SendMessagePanel({ queueName, queueUrl }: { queueName: string; queueUrl
           {fifo ? (
             <>
               <TextField label="Message group ID" placeholder="group-1" error={errors.groupId?.message} {...form.register("groupId")} />
-              <TextField label="Message deduplication ID" placeholder="Optional with content-based deduplication" {...form.register("deduplicationId")} />
+              <TextField
+                label="Message deduplication ID"
+                placeholder={contentBasedDeduplication ? "Optional (content-based deduplication is enabled)" : "dedup-1"}
+                error={errors.deduplicationId?.message}
+                {...form.register("deduplicationId")}
+              />
             </>
           ) : (
             <TextField label="Delivery delay (seconds)" inputMode="numeric" placeholder="0" error={errors.delaySeconds?.message} {...form.register("delaySeconds")} />
@@ -143,8 +157,8 @@ function ReceiveMessagesPanel({ queueUrl }: { queueUrl: string }) {
       bodyClassName="px-0! py-0!"
     >
       <form onSubmit={form.handleSubmit((v) => receive.mutate(v))} noValidate className="flex flex-wrap items-end gap-3 px-5 py-4">
-        <TextField label="Poll duration (seconds)" inputMode="numeric" className="w-44" error={errors.waitTime?.message} {...form.register("waitTime")} />
-        <TextField label="Maximum message count" inputMode="numeric" className="w-44" error={errors.maxMessages?.message} {...form.register("maxMessages")} />
+        <TextField label="Poll duration (seconds)" inputMode="numeric" className="w-52" error={errors.waitTime?.message} {...form.register("waitTime")} />
+        <TextField label="Maximum message count" inputMode="numeric" className="w-52" error={errors.maxMessages?.message} {...form.register("maxMessages")} />
         <div className="flex gap-2 pb-px">
           <Button type="submit" variant="primary" loading={receive.isPending}>
             Receive messages
@@ -197,14 +211,14 @@ function ReceiveMessagesPanel({ queueUrl }: { queueUrl: string }) {
                         type="button"
                         aria-expanded={open}
                         onClick={() => setExpanded(open ? null : m.MessageId)}
-                        className="flex items-center gap-1 text-left font-mono text-xs font-bold text-aws-link hover:underline"
+                        className="flex items-center gap-1 text-left font-mono text-xs leading-5 font-bold text-aws-link hover:underline"
                       >
                         {open ? <ChevronDown className="size-3.5 shrink-0" aria-hidden /> : <ChevronRight className="size-3.5 shrink-0" aria-hidden />}
                         {m.MessageId}
                       </button>
                     </Td>
                     <Td className="max-w-md">
-                      <span className="line-clamp-2 font-mono text-xs break-all">{m.Body}</span>
+                      <span className="line-clamp-2 font-mono text-xs leading-5 break-all">{m.Body}</span>
                     </Td>
                     <Td className="whitespace-nowrap">{formatDateTime(m.Attributes?.SentTimestamp)}</Td>
                     <Td className="whitespace-nowrap">{formatBytes(new TextEncoder().encode(m.Body).length)}</Td>
@@ -237,7 +251,7 @@ function MessageDetails({ message }: { message: SqsMessage }) {
   const attrs = Object.entries(message.Attributes ?? {});
   const messageAttrs = Object.entries(message.MessageAttributes ?? {});
   return (
-    <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
+    <div className="grid gap-4 lg:grid-cols-2">
       <div className="min-w-0">
         <p className="mb-1 text-sm font-bold">Body</p>
         <pre aria-label="Message body content" className="max-h-80 overflow-auto rounded-lg border border-aws-border bg-white p-3 font-mono text-xs whitespace-pre-wrap">
@@ -253,7 +267,7 @@ function MessageDetails({ message }: { message: SqsMessage }) {
             {attrs.map(([k, v]) => (
               <Fragment key={k}>
                 <dt className="text-aws-muted">{k}</dt>
-                <dd className="font-mono break-all">{/Timestamp$/.test(k) ? formatDateTime(v) : v}</dd>
+                {/Timestamp$/.test(k) ? <dd className="whitespace-nowrap">{formatDateTime(v)}</dd> : <dd className="font-mono break-all">{v}</dd>}
               </Fragment>
             ))}
           </dl>

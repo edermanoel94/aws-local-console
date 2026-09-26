@@ -4,6 +4,7 @@ import { Plus } from "lucide-react";
 import { Badge, Button } from "@/components/ui";
 import { useAwsLoader } from "../_shared/aws";
 import { formatBytes } from "../_shared/format";
+import { listAllPages } from "../_shared/paginate";
 import { ConsoleLink } from "../_shared/layout";
 import { useConsoleNav } from "../_shared/nav";
 import { ResourceTable } from "../_shared/resource-table";
@@ -16,8 +17,11 @@ export function StatusBadge({ status }: { status?: string }) {
 export function TableList() {
   const { navigate } = useConsoleNav();
   const tables = useAwsLoader(["dynamodb", "tables"], async (exec) => {
-    const out = await exec<{ TableNames?: string[] | null }>("dynamodb", "ListTables", {});
-    const names = out.TableNames ?? [];
+    const names = await listAllPages<{ TableNames?: string[] | null; LastEvaluatedTableName?: string | null }, string>(exec, "dynamodb", "ListTables", {}, {
+      items: (out) => out.TableNames,
+      next: (out) => out.LastEvaluatedTableName,
+      tokenField: "ExclusiveStartTableName",
+    });
     const described = await Promise.all(names.map((n) => describeTable(exec, n).catch(() => ({ TableName: n }) as TableDescription)));
     return described.sort((a, b) => a.TableName.localeCompare(b.TableName));
   });

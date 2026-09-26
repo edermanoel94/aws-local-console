@@ -2,6 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { uniqueName } from "../support/names";
 import { cleanup } from "../support/cleanup";
 import { consolePanel, deleteWithConfirmation, expectSuccess, openConsole, openTab, row } from "../support/console";
+import { createQueueInConsole as createQueue } from "../support/sqs";
 
 /** SPEC 18 (SQS) and SPEC 48 scenario 2, through the SQS console. */
 const queues: string[] = [];
@@ -10,24 +11,17 @@ test.afterAll(async () => {
   for (const q of queues) await cleanup.queue(q);
 });
 
-async function createQueue(page: Page, name: string, options?: { fifo?: boolean; visibilityTimeout?: string }) {
-  await openConsole(page, "sqs");
-  await consolePanel(page).getByRole("button", { name: "Create queue" }).click();
-  if (options?.fifo) await page.getByLabel("FIFO").check();
-  await page.getByLabel("Queue name").fill(name);
-  if (options?.visibilityTimeout) await page.getByLabel("Visibility timeout (seconds)").fill(options.visibilityTimeout);
-  await page.getByRole("button", { name: "Create", exact: true }).click();
-  const fullName = options?.fifo ? `${name}.fifo` : name;
-  await expectSuccess(page, `Queue ${fullName} created`);
-  await expect(page.getByRole("heading", { level: 2, name: fullName })).toBeVisible();
-  return fullName;
-}
-
-async function sendMessage(page: Page, body: string, groupId?: string) {
+async function sendMessage(page: Page, body: string, fifo?: { groupId: string; deduplicationId?: string }) {
   await page.getByLabel("Message body").fill(body);
-  if (groupId) await page.getByLabel("Message group ID").fill(groupId);
+  if (fifo) await page.getByLabel("Message group ID").fill(fifo.groupId);
+  if (fifo?.deduplicationId) await page.getByLabel("Message deduplication ID").fill(fifo.deduplicationId);
   await page.getByRole("button", { name: "Send message" }).click();
   await expectSuccess(page, "Message sent to");
+}
+
+/** Value of one entry of the queue "Details" panel. */
+function detailValue(page: Page, label: string) {
+  return consolePanel(page).getByRole("term").filter({ hasText: new RegExp(`^${label}$`) }).locator("xpath=following-sibling::dd[1]");
 }
 
 async function receiveMessages(page: Page) {
@@ -82,16 +76,29 @@ test.describe("SQS console", () => {
     await expect(consolePanel(page).getByText("FIFO", { exact: true }).first()).toBeVisible();
     await expect(consolePanel(page).getByText("45 seconds")).toBeVisible();
 
-    await sendMessage(page, "first in line", "orders");
+    await expect(detailValue(page, "Content-based deduplication")).toHaveText("Disabled");
+
+    // Without content-based deduplication, SQS requires a deduplication ID: the form says so before sending.
+    await page.getByLabel("Message body").fill("first in line");
+    await page.getByLabel("Message group ID").fill("orders");
+    await page.getByRole("button", { name: "Send message" }).click();
+    await expect(page.getByText("Message deduplication ID is required because content-based deduplication is disabled")).toBeVisible();
+    await sendMessage(page, "first in line", { groupId: "orders", deduplicationId: "order-1" });
     await receiveMessages(page);
     await expect(row(page, "Received messages", "first in line")).toBeVisible();
 
-    // Edit attributes.
+    // Edit attributes: longer visibility timeout and content-based deduplication.
     await openTab(page, "Configuration");
     await page.getByLabel("Visibility timeout (seconds)").fill("60");
+    await page.getByLabel("Content-based deduplication").check();
     await consolePanel(page).getByRole("button", { name: "Save", exact: true }).click();
     await expectSuccess(page, `Queue ${queue} updated`);
     await expect(consolePanel(page).getByText("1 minute")).toBeVisible();
+    await expect(detailValue(page, "Content-based deduplication")).toHaveText("Enabled");
+
+    // With content-based deduplication the deduplication ID is optional.
+    await openTab(page, "Send and receive messages");
+    await sendMessage(page, "second in line", { groupId: "orders" });
   });
 
   test("validates the queue name", async ({ page }) => {

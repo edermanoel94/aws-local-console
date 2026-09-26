@@ -2,14 +2,21 @@
 
 import { Plus, Send } from "lucide-react";
 import { Badge, Button } from "@/components/ui";
-import { useAwsQuery } from "../_shared/aws";
+import { useAwsLoader } from "../_shared/aws";
+import { listAllPages } from "../_shared/paginate";
 import { ConsoleLink } from "../_shared/layout";
 import { useConsoleNav } from "../_shared/nav";
 import { ResourceTable } from "../_shared/resource-table";
 import { DEFAULT_BUS, type EventBus, type Rule } from "./events-types";
 
 export function useEventBuses() {
-  return useAwsQuery<{ EventBuses?: EventBus[] | null }>("events", "ListEventBuses", {});
+  return useAwsLoader(["events", "buses"], async (exec) => ({
+    EventBuses: await listAllPages<{ EventBuses?: EventBus[] | null; NextToken?: string | null }, EventBus>(exec, "events", "ListEventBuses", {}, {
+      items: (out) => out.EventBuses,
+      next: (out) => out.NextToken,
+      tokenField: "NextToken",
+    }),
+  }));
 }
 
 export function RuleStateBadge({ state }: { state?: string }) {
@@ -20,8 +27,15 @@ export function RuleStateBadge({ state }: { state?: string }) {
 export function RulesTable({ bus, fixedBus }: { bus: string; fixedBus?: boolean }) {
   const { navigate } = useConsoleNav();
   const buses = useEventBuses();
-  const rules = useAwsQuery<{ Rules?: Rule[] | null }>("events", "ListRules", { EventBusName: bus });
-  const items = rules.data ? [...(rules.data.Rules ?? [])].sort((a, b) => a.Name.localeCompare(b.Name)) : undefined;
+  const rules = useAwsLoader(["events", "rules", bus], async (exec) => {
+    const list = await listAllPages<{ Rules?: Rule[] | null; NextToken?: string | null }, Rule>(exec, "events", "ListRules", { EventBusName: bus }, {
+      items: (out) => out.Rules,
+      next: (out) => out.NextToken,
+      tokenField: "NextToken",
+    });
+    return list.sort((a, b) => a.Name.localeCompare(b.Name));
+  });
+  const items = rules.data;
   const busOptions = (buses.data?.EventBuses ?? [{ Name: DEFAULT_BUS }]).map((b) => ({ value: b.Name, label: b.Name }));
   if (!busOptions.some((b) => b.value === bus)) busOptions.unshift({ value: bus, label: bus });
 
@@ -74,7 +88,7 @@ export function RulesTable({ bus, fixedBus }: { bus: string; fixedBus?: boolean 
         { header: "Status", cell: (r) => <RuleStateBadge state={r.State} /> },
         { header: "Type", cell: (r) => (r.ScheduleExpression ? "Scheduled" : "Standard") },
         { header: "Description", cell: (r) => <span className="text-aws-muted">{r.Description || "-"}</span> },
-        { header: "Event pattern / schedule", cell: (r) => <span className="line-clamp-2 max-w-md font-mono text-xs break-all">{r.ScheduleExpression ?? r.EventPattern ?? "-"}</span> },
+        { header: "Event pattern / schedule", cell: (r) => <span className="line-clamp-2 max-w-md font-mono text-xs leading-5 break-all">{r.ScheduleExpression ?? r.EventPattern ?? "-"}</span> },
       ]}
     />
   );

@@ -1,5 +1,6 @@
 import type { Exec } from "../_shared/aws";
 import { queueNameFromUrl } from "../_shared/aws";
+import { listAllPages } from "../_shared/paginate";
 
 export type QueueAttributes = Record<string, string>;
 
@@ -10,8 +11,11 @@ export interface QueueSummary {
 }
 
 export async function loadQueues(exec: Exec): Promise<QueueSummary[]> {
-  const out = await exec<{ QueueUrls?: string[] | null }>("sqs", "ListQueues", { MaxResults: 1000 });
-  const urls = out.QueueUrls ?? [];
+  const urls = await listAllPages<{ QueueUrls?: string[] | null; NextToken?: string | null }, string>(exec, "sqs", "ListQueues", { MaxResults: 1000 }, {
+    items: (out) => out.QueueUrls,
+    next: (out) => out.NextToken,
+    tokenField: "NextToken",
+  });
   const queues = await Promise.all(
     urls.map(async (url) => {
       try {

@@ -8,6 +8,7 @@ import { Plus } from "lucide-react";
 import { Button, EmptyState, ErrorAlert, Loading, Panel, SelectField, Table, Td, TextField, Th, Tr } from "@/components/ui";
 import { useAwsQuery } from "../_shared/aws";
 import { SegmentedControl } from "../_shared/controls";
+import { plural } from "../_shared/format";
 import { RefreshButton } from "../_shared/resource-table";
 import { displayValue, type AttributeValue, type DynamoItem } from "./ddb-json";
 import { tableKeys, TYPE_LABELS, type TableDescription } from "./ddb-types";
@@ -150,7 +151,7 @@ export function ItemsExplorer({ table }: { table: TableDescription }) {
       <Panel
         title="Items returned"
         count={result.data ? items.length : undefined}
-        description={result.data ? `${operation} returned ${result.data.Count ?? items.length} items (${result.data.ScannedCount ?? items.length} scanned).` : undefined}
+        description={result.data ? `${operation} returned ${plural(result.data.Count ?? items.length, "item")} (${result.data.ScannedCount ?? items.length} scanned).` : undefined}
         bodyClassName="px-0! py-0!"
         actions={
           <>
@@ -195,7 +196,7 @@ export function ItemsExplorer({ table }: { table: TableDescription }) {
                             {displayValue(item[c])}
                           </button>
                         ) : (
-                          <span className="line-clamp-2 max-w-xs font-mono text-xs break-all">{item[c] ? displayValue(item[c]) : ""}</span>
+                          <span className="line-clamp-2 max-w-xs font-mono text-xs leading-5 break-all">{item[c] ? displayValue(item[c]) : ""}</span>
                         )}
                       </Td>
                     ))}

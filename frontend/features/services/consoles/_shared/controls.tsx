@@ -27,17 +27,19 @@ export function RadioCards<T extends string>({
   value,
   onChange,
   options,
+  columns = 2,
 }: {
   legend: string;
   name: string;
   value: T;
   onChange: (value: T) => void;
   options: { value: T; label: string; description?: string }[];
+  columns?: 2 | 3;
 }) {
   return (
     <fieldset className="flex flex-col gap-1">
       <legend className="mb-1 text-sm font-bold text-aws-ink">{legend}</legend>
-      <div className="grid gap-2 sm:grid-cols-2">
+      <div className={cn("grid gap-2", columns === 3 ? "sm:grid-cols-3" : "sm:grid-cols-2")}>
         {options.map((o) => (
           <label
             key={o.value}
@@ -351,12 +353,13 @@ export function SegmentedControl<T extends string>({
           <label
             key={o.value}
             className={cn(
-              "cursor-pointer px-4 py-1 text-sm font-bold focus-within:outline-2 focus-within:outline-offset-[-2px] focus-within:outline-aws-link",
+              "relative cursor-pointer px-4 py-1 text-sm font-bold focus-within:outline-2 focus-within:outline-offset-[-2px] focus-within:outline-aws-link",
               i > 0 && "border-l border-aws-border-strong",
               value === o.value ? "bg-aws-navy text-white" : "bg-white text-aws-ink hover:bg-aws-panel",
             )}
           >
-            <input type="radio" name={name} value={o.value} checked={value === o.value} onChange={() => onChange(o.value)} className="sr-only" />
+            {/* Transparent radio covering the whole segment: clicks land on the real input (keyboard and pointer), no visual radio. */}
+            <input type="radio" name={name} value={o.value} checked={value === o.value} onChange={() => onChange(o.value)} className="absolute inset-0 m-0 cursor-pointer appearance-none opacity-0" />
             {o.label}
           </label>
         ))}

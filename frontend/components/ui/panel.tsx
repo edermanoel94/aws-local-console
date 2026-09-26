@@ -27,7 +27,8 @@ export function Panel({
             {title && (
               <h2 className="text-lg font-bold text-aws-ink">
                 {title}
-                {count !== undefined && <span className="ml-1 font-normal text-aws-muted">({count})</span>}
+                {/* A real space (not a margin) so the accessible name reads "Queues (3)", like the visible text. */}
+                {count !== undefined && <span className="font-normal text-aws-muted"> ({count})</span>}
               </h2>
             )}
             {description && <p className="text-sm text-aws-muted">{description}</p>}

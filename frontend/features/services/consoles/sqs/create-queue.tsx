@@ -18,7 +18,7 @@ const schema = z
     visibilityTimeout: optionalInt(0, 43200, "Visibility timeout"),
     retentionPeriod: optionalInt(60, 1209600, "Message retention period"),
     delaySeconds: optionalInt(0, 900, "Delivery delay"),
-    maximumMessageSize: optionalInt(1024, 262144, "Maximum message size"),
+    maximumMessageSize: optionalInt(1024, 1048576, "Maximum message size"),
     receiveWaitTime: optionalInt(0, 20, "Receive message wait time"),
     contentBasedDeduplication: z.boolean(),
   })
@@ -42,7 +42,7 @@ export function CreateQueuePage() {
       visibilityTimeout: "30",
       retentionPeriod: "345600",
       delaySeconds: "0",
-      maximumMessageSize: "262144",
+      maximumMessageSize: "1048576",
       receiveWaitTime: "0",
       contentBasedDeduplication: false,
     },
@@ -118,7 +118,7 @@ export function CreateQueuePage() {
           <TextField label="Visibility timeout (seconds)" inputMode="numeric" description="0 seconds to 12 hours" error={errors.visibilityTimeout?.message} {...form.register("visibilityTimeout")} />
           <TextField label="Message retention period (seconds)" inputMode="numeric" description="1 minute to 14 days" error={errors.retentionPeriod?.message} {...form.register("retentionPeriod")} />
           <TextField label="Delivery delay (seconds)" inputMode="numeric" description="0 seconds to 15 minutes" error={errors.delaySeconds?.message} {...form.register("delaySeconds")} />
-          <TextField label="Maximum message size (bytes)" inputMode="numeric" description="1 KB to 256 KB" error={errors.maximumMessageSize?.message} {...form.register("maximumMessageSize")} />
+          <TextField label="Maximum message size (bytes)" inputMode="numeric" description="1 KB to 1 MB" error={errors.maximumMessageSize?.message} {...form.register("maximumMessageSize")} />
           <TextField label="Receive message wait time (seconds)" inputMode="numeric" description="0 to 20 seconds (long polling)" error={errors.receiveWaitTime?.message} {...form.register("receiveWaitTime")} />
         </div>
         {type === "fifo" && (

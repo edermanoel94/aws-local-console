@@ -14,11 +14,14 @@ interface ToastState {
 
 let nextId = 1;
 
+/** Older notifications are dropped beyond this, so a burst of actions never piles toasts over the page. */
+const MAX_VISIBLE = 3;
+
 export const useToastStore = create<ToastState>((set) => ({
   toasts: [],
   push: (kind, message) => {
     const id = nextId++;
-    set((s) => ({ toasts: [...s.toasts, { id, kind, message }] }));
+    set((s) => ({ toasts: [...s.toasts, { id, kind, message }].slice(-MAX_VISIBLE) }));
     setTimeout(() => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })), 6000);
   },
   dismiss: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),

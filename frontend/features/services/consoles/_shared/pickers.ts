@@ -1,6 +1,7 @@
 "use client";
 
 import { useAwsLoader, nameFromArn, queueNameFromUrl, type Exec } from "./aws";
+import { listAllPages } from "./paginate";
 
 export interface ArnOption {
   value: string;
@@ -8,15 +9,25 @@ export interface ArnOption {
 }
 
 async function queueOptions(exec: Exec): Promise<ArnOption[]> {
-  const out = await exec<{ QueueUrls?: string[] }>("sqs", "ListQueues", {});
-  const urls = out.QueueUrls ?? [];
+  const urls = await listAllPages<{ QueueUrls?: string[] | null; NextToken?: string | null }, string>(exec, "sqs", "ListQueues", { MaxResults: 1000 }, {
+    items: (out) => out.QueueUrls,
+    next: (out) => out.NextToken,
+    tokenField: "NextToken",
+  });
   const arns = await Promise.all(
     urls.map(async (url) => {
-      const attrs = await exec<{ Attributes?: Record<string, string> }>("sqs", "GetQueueAttributes", { QueueUrl: url, AttributeNames: ["QueueArn"] });
-      return { value: attrs.Attributes?.QueueArn ?? url, label: queueNameFromUrl(url) };
+      const name = queueNameFromUrl(url);
+      try {
+        const attrs = await exec<{ Attributes?: Record<string, string> }>("sqs", "GetQueueAttributes", { QueueUrl: url, AttributeNames: ["QueueArn"] });
+        const arn = attrs.Attributes?.QueueArn;
+        return arn ? { value: arn, label: name } : null;
+      } catch {
+        // Queue deleted between ListQueues and GetQueueAttributes: one stale entry must not break the whole picker.
+        return null;
+      }
     }),
   );
-  return arns.sort((a, b) => a.label.localeCompare(b.label));
+  return arns.filter((a): a is ArnOption => a !== null).sort((a, b) => a.label.localeCompare(b.label));
 }
 
 async function functionOptions(exec: Exec): Promise<ArnOption[]> {
@@ -25,8 +36,12 @@ async function functionOptions(exec: Exec): Promise<ArnOption[]> {
 }
 
 async function topicOptions(exec: Exec): Promise<ArnOption[]> {
-  const out = await exec<{ Topics?: { TopicArn: string }[] }>("sns", "ListTopics", {});
-  return (out.Topics ?? []).map((t) => ({ value: t.TopicArn, label: nameFromArn(t.TopicArn) })).sort((a, b) => a.label.localeCompare(b.label));
+  const topics = await listAllPages<{ Topics?: { TopicArn: string }[] | null; NextToken?: string | null }, { TopicArn: string }>(exec, "sns", "ListTopics", {}, {
+    items: (out) => out.Topics,
+    next: (out) => out.NextToken,
+    tokenField: "NextToken",
+  });
+  return topics.map((t) => ({ value: t.TopicArn, label: nameFromArn(t.TopicArn) })).sort((a, b) => a.label.localeCompare(b.label));
 }
 
 /** Existing SQS queues as ARN options (for triggers, subscriptions, rule targets, notifications). */

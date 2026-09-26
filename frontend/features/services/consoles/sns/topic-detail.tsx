@@ -14,6 +14,7 @@ import { useConsoleNav } from "../_shared/nav";
 import { useFunctionOptions, useQueueOptions } from "../_shared/pickers";
 import { ResourceTable } from "../_shared/resource-table";
 import { TagsPanel } from "../_shared/tags-panel";
+import { prettyJson } from "../_shared/format";
 import { jsonText } from "../_shared/validation";
 
 type TopicTab = "subscriptions" | "details" | "tags";
@@ -23,6 +24,16 @@ const TABS: { value: TopicTab; label: string }[] = [
   { value: "details", label: "Details" },
   { value: "tags", label: "Tagging" },
 ];
+
+/** Policy-like attributes (Policy, DeliveryPolicy, ...) are JSON documents and read better formatted. */
+function isJsonObject(value: string): boolean {
+  if (!value.trim().startsWith("{")) return false;
+  try {
+    return typeof JSON.parse(value) === "object";
+  } catch {
+    return false;
+  }
+}
 
 export function useTopicArn(name: string) {
   const region = useRegion();
@@ -92,7 +103,9 @@ export function TopicDetail({ topicName }: { topicName: string }) {
                   .map(([k, v]) => (
                     <div key={k} className="grid gap-1 px-5 py-2 md:grid-cols-[280px_1fr]">
                       <dt className="text-sm text-aws-muted">{k}</dt>
-                      <dd className="font-mono text-xs leading-5 break-all">{v || "-"}</dd>
+                      <dd className="min-w-0 font-mono text-xs leading-5 break-all">
+                        {isJsonObject(v) ? <pre className="max-h-72 overflow-auto rounded-lg border border-aws-border bg-aws-panel p-3 whitespace-pre-wrap">{prettyJson(v)}</pre> : v || "-"}
+                      </dd>
                     </div>
                   ))}
               </dl>

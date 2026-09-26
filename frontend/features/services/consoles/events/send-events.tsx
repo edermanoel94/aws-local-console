@@ -49,6 +49,9 @@ export function SendEventsPage() {
   });
 
   const busOptions = (buses.data?.EventBuses ?? [{ Name: DEFAULT_BUS }]).map((b) => ({ value: b.Name, label: b.Name }));
+  // Keep the preselected bus selectable while the bus list loads, so the select shows the value that will be sent.
+  const initialBus = prefix ?? DEFAULT_BUS;
+  if (!busOptions.some((b) => b.value === initialBus)) busOptions.unshift({ value: initialBus, label: initialBus });
   const { errors } = form.formState;
   const back = () => navigate({ prefix: prefix ?? null });
   const eventId = send.data?.Entries?.[0]?.EventId;

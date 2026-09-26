@@ -65,7 +65,7 @@ export function QueueDetail({ queueName }: { queueName: string }) {
         <>
           <QueueSummaryPanel name={queueName} queue={queue.data} />
           <Tabs label="Queue sections" tabs={TABS} value={tab} onChange={(t) => navigate({ resource: queueName, detail: t })} />
-          {tab === "messages" && <SendReceive queueName={queueName} queueUrl={queue.data.url} />}
+          {tab === "messages" && <SendReceive queueName={queueName} queueUrl={queue.data.url} contentBasedDeduplication={queue.data.attributes.ContentBasedDeduplication === "true"} />}
           {tab === "configuration" && <EditQueueAttributes queueName={queueName} queue={queue.data} />}
           {tab === "triggers" && <LambdaTriggers queueArn={queue.data.attributes.QueueArn ?? ""} />}
           {tab === "tags" && (
@@ -119,6 +119,15 @@ export function QueueDetail({ queueName }: { queueName: string }) {
   );
 }
 
+function deadLetterQueueName(redrivePolicy: string | undefined): string {
+  try {
+    const arn = (JSON.parse(redrivePolicy ?? "") as { deadLetterTargetArn?: string }).deadLetterTargetArn;
+    return arn ? (arn.split(":").pop() ?? arn) : "-";
+  } catch {
+    return "-";
+  }
+}
+
 function QueueSummaryPanel({ name, queue }: { name: string; queue: QueueInfo }) {
   const a = queue.attributes;
   return (
@@ -138,6 +147,10 @@ function QueueSummaryPanel({ name, queue }: { name: string; queue: QueueInfo }) 
           { label: "Visibility timeout", value: formatSeconds(a.VisibilityTimeout) },
           { label: "Message retention period", value: formatSeconds(a.MessageRetentionPeriod) },
           { label: "Maximum message size", value: a.MaximumMessageSize ? formatBytes(Number(a.MaximumMessageSize)) : "-" },
+          { label: "Delivery delay", value: formatSeconds(a.DelaySeconds) },
+          { label: "Receive message wait time", value: formatSeconds(a.ReceiveMessageWaitTimeSeconds) },
+          { label: "Dead-letter queue", value: deadLetterQueueName(a.RedrivePolicy) },
+          ...(isFifo(name) ? [{ label: "Content-based deduplication", value: a.ContentBasedDeduplication === "true" ? "Enabled" : "Disabled" }] : []),
         ]}
       />
     </Panel>

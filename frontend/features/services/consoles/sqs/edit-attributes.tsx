@@ -5,20 +5,21 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button, ErrorAlert, Panel, TextField } from "@/components/ui";
 import { useConsoleAction } from "../_shared/aws";
-import { SuggestField } from "../_shared/controls";
+import { Checkbox, SuggestField } from "../_shared/controls";
 import { useQueueOptions } from "../_shared/pickers";
 import { optionalInt, requiredInt } from "../_shared/validation";
-import type { QueueInfo } from "./sqs-utils";
+import { isFifo, type QueueInfo } from "./sqs-utils";
 
 const schema = z
   .object({
     visibilityTimeout: requiredInt(0, 43200, "Visibility timeout"),
     retentionPeriod: requiredInt(60, 1209600, "Message retention period"),
     delaySeconds: requiredInt(0, 900, "Delivery delay"),
-    maximumMessageSize: requiredInt(1024, 262144, "Maximum message size"),
+    maximumMessageSize: requiredInt(1024, 1048576, "Maximum message size"),
     receiveWaitTime: requiredInt(0, 20, "Receive message wait time"),
     deadLetterTargetArn: z.string().trim(),
     maxReceiveCount: optionalInt(1, 1000, "Maximum receives"),
+    contentBasedDeduplication: z.boolean(),
   })
   .refine((v) => !v.deadLetterTargetArn || v.maxReceiveCount !== "", { path: ["maxReceiveCount"], message: "Enter the maximum receives for the dead-letter queue." });
 
@@ -36,6 +37,7 @@ function parseRedrive(value: string | undefined): { deadLetterTargetArn: string;
 /** Editable queue configuration (SetQueueAttributes). */
 export function EditQueueAttributes({ queueName, queue }: { queueName: string; queue: QueueInfo }) {
   const a = queue.attributes;
+  const fifo = isFifo(queueName);
   const queues = useQueueOptions();
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -43,9 +45,10 @@ export function EditQueueAttributes({ queueName, queue }: { queueName: string; q
       visibilityTimeout: a.VisibilityTimeout ?? "30",
       retentionPeriod: a.MessageRetentionPeriod ?? "345600",
       delaySeconds: a.DelaySeconds ?? "0",
-      maximumMessageSize: a.MaximumMessageSize ?? "262144",
+      maximumMessageSize: a.MaximumMessageSize ?? "1048576",
       receiveWaitTime: a.ReceiveMessageWaitTimeSeconds ?? "0",
       ...parseRedrive(a.RedrivePolicy),
+      contentBasedDeduplication: a.ContentBasedDeduplication === "true",
     },
   });
 
@@ -60,6 +63,7 @@ export function EditQueueAttributes({ queueName, queue }: { queueName: string; q
       };
       if (v.deadLetterTargetArn) attributes.RedrivePolicy = JSON.stringify({ deadLetterTargetArn: v.deadLetterTargetArn, maxReceiveCount: Number(v.maxReceiveCount) });
       else if (a.RedrivePolicy) attributes.RedrivePolicy = "";
+      if (fifo) attributes.ContentBasedDeduplication = String(v.contentBasedDeduplication);
       return exec("sqs", "SetQueueAttributes", { QueueUrl: queue.url, Attributes: attributes });
     },
     successMessage: () => `Queue ${queueName} updated`,
@@ -77,6 +81,14 @@ export function EditQueueAttributes({ queueName, queue }: { queueName: string; q
           <TextField label="Maximum message size (bytes)" inputMode="numeric" error={errors.maximumMessageSize?.message} {...form.register("maximumMessageSize")} />
           <TextField label="Receive message wait time (seconds)" inputMode="numeric" error={errors.receiveWaitTime?.message} {...form.register("receiveWaitTime")} />
         </div>
+        {fifo && (
+          <Checkbox
+            className="mt-4"
+            label="Content-based deduplication"
+            description="Use a SHA-256 hash of the message body to generate the deduplication ID."
+            {...form.register("contentBasedDeduplication")}
+          />
+        )}
       </Panel>
       <Panel title="Dead-letter queue" description="Send messages that can't be processed after the maximum receives to another queue.">
         <div className="grid gap-4 md:grid-cols-2">

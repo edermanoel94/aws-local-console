@@ -7,8 +7,10 @@ import { cn } from "@/lib/cn";
 export function Toaster() {
   const { toasts, dismiss } = useToastStore();
   return (
-    <div className="pointer-events-none fixed right-4 bottom-4 z-50 flex w-96 max-w-[calc(100vw-2rem)] flex-col gap-2">
-      {toasts.map((t) => (
+    // Top right, under the top bar: forms and panels keep their primary actions at the bottom right, which a bottom toast would cover.
+    // Newest first.
+    <div className="pointer-events-none fixed top-16 right-4 z-50 flex w-96 max-w-[calc(100vw-2rem)] flex-col gap-2">
+      {[...toasts].reverse().map((t) => (
         <div
           key={t.id}
           role={t.kind === "error" ? "alert" : "status"}

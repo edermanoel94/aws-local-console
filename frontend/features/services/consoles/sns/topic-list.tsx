@@ -2,7 +2,8 @@
 
 import { Plus } from "lucide-react";
 import { Badge, Button } from "@/components/ui";
-import { nameFromArn, useAwsQuery } from "../_shared/aws";
+import { nameFromArn, useAwsLoader } from "../_shared/aws";
+import { listAllPages } from "../_shared/paginate";
 import { ConsoleLink } from "../_shared/layout";
 import { useConsoleNav } from "../_shared/nav";
 import { ResourceTable } from "../_shared/resource-table";
@@ -14,8 +15,15 @@ interface TopicRow {
 
 export function TopicList() {
   const { navigate } = useConsoleNav();
-  const topics = useAwsQuery<{ Topics?: { TopicArn: string }[] | null }>("sns", "ListTopics");
-  const items = topics.data ? (topics.data.Topics ?? []).map((t) => ({ arn: t.TopicArn, name: nameFromArn(t.TopicArn) })).sort((a, b) => a.name.localeCompare(b.name)) : undefined;
+  const topics = useAwsLoader(["sns", "topics"], async (exec) => {
+    const list = await listAllPages<{ Topics?: { TopicArn: string }[] | null; NextToken?: string | null }, { TopicArn: string }>(exec, "sns", "ListTopics", {}, {
+      items: (out) => out.Topics,
+      next: (out) => out.NextToken,
+      tokenField: "NextToken",
+    });
+    return list.map((t) => ({ arn: t.TopicArn, name: nameFromArn(t.TopicArn) })).sort((a, b) => a.name.localeCompare(b.name));
+  });
+  const items = topics.data;
 
   return (
     <>

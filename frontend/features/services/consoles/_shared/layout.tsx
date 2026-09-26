@@ -127,8 +127,8 @@ export function FormPage({
   );
 }
 
-/** Label/value grid used by "Details" / "General configuration" sections. */
-export function DetailsGrid({ items, columns = 3 }: { items: { label: string; value: ReactNode; mono?: boolean }[]; columns?: 2 | 3 | 4 }) {
+/** Label/value grid used by "Details" / "General configuration" sections. `wide` items span two columns (long ARNs). */
+export function DetailsGrid({ items, columns = 3 }: { items: { label: string; value: ReactNode; mono?: boolean; wide?: boolean }[]; columns?: 2 | 3 | 4 }) {
   return (
     <dl
       className={cn(
@@ -139,7 +139,7 @@ export function DetailsGrid({ items, columns = 3 }: { items: { label: string; va
       )}
     >
       {items.map((item) => (
-        <div key={item.label} className="min-w-0">
+        <div key={item.label} className={cn("min-w-0", item.wide && "md:col-span-2")}>
           <dt className="text-sm text-aws-muted">{item.label}</dt>
           <dd className={cn("mt-0.5 text-sm break-words text-aws-ink", item.mono && "font-mono text-xs leading-5")}>
             {item.value === undefined || item.value === null || item.value === "" ? "-" : item.value}
