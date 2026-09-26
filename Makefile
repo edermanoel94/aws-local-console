@@ -109,4 +109,4 @@ dev-backend: ## Run the Go API on the host against Floci (go run)
 		PORT=$(API_PORT) CORS_ORIGINS=$(WEB_URL) go run ./cmd/api
 
 dev-frontend: ## Run the Next.js dev server on the host
-	cd frontend && NEXT_PUBLIC_API_URL=$(API_URL) PORT=$(WEB_PORT) $(PNPM) dev
+	cd frontend && API_INTERNAL_URL=$(API_URL) PORT=$(WEB_PORT) $(PNPM) dev

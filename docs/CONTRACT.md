@@ -23,8 +23,11 @@ PORT=8080
 CORS_ORIGINS=http://localhost:3000
 ```
 
-Frontend environment variable: `NEXT_PUBLIC_API_URL` (default `http://localhost:8080`).
-The browser calls the Go API directly; the Go API sends CORS headers for `CORS_ORIGINS`.
+Frontend environment variable: `API_INTERNAL_URL` (default `http://localhost:8080`; `http://backend:8080` in Compose), read at runtime.
+The browser never calls the Go API directly: it calls `/api/v1/*` on the Next.js origin, and the route handler `frontend/app/api/v1/[...path]/route.ts` proxies the request to `API_INTERNAL_URL`.
+This keeps the console working from any host name, IP, tunnel or device without CORS, and the frontend image carries no environment-specific URL.
+When the Go API cannot be reached, the proxy answers 502 with the error envelope and code `ApiUnreachable`.
+`CORS_ORIGINS` on the Go API only matters for browsers calling it directly.
 
 Floci account id is `000000000000`.
 The Floci container resolves itself as `localhost.floci.io`; S3 must use path-style addressing.

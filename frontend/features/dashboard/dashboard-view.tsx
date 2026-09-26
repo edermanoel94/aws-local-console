@@ -180,7 +180,7 @@ function ResourcesByService({ loading, failed, data }: { loading: boolean; faile
       ) : (
         <ul className="flex flex-col gap-2.5">
           {rows.map((r) => (
-            <li key={r.service} className="grid grid-cols-[9rem_1fr_3rem] items-center gap-3 text-sm">
+            <li key={r.service} className="grid grid-cols-[11rem_1fr_3rem] items-center gap-3 text-sm">
               <Link href={`/services/${r.service}?tab=resources`} className="flex items-center gap-2 text-aws-ink no-underline hover:text-aws-link">
                 <ServiceIcon service={r.service} size="sm" />
                 <span className="truncate font-bold">{SERVICE_SHORT_NAMES[r.service] ?? r.service}</span>

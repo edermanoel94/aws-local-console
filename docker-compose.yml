@@ -3,9 +3,9 @@
 # Host ports are configurable (defaults in parentheses):
 #   FLOCI_PORT (4566), API_PORT (8080), WEB_PORT (3000)
 # e.g. `API_PORT=18080 WEB_PORT=13000 docker compose up -d --build --wait`.
-# The browser talks to the Go API directly, so the frontend is built with
-# NEXT_PUBLIC_API_URL=http://localhost:${API_PORT} and the API allows CORS from
-# http://localhost:${WEB_PORT}.
+# The browser only talks to Next.js, which proxies /api/v1 to the Go API over
+# the compose network (API_INTERNAL_URL), so the console works from any host
+# name or device. API_PORT publishes the Go API for tests and direct use.
 #
 # Floci / Lambda networking notes (verified against floci/floci 2.1.0):
 # - Lambda functions run as sibling containers started through the mounted
@@ -58,6 +58,7 @@ services:
       AWS_REGION: us-east-1
       AWS_ACCESS_KEY_ID: test
       AWS_SECRET_ACCESS_KEY: test
+      # Only needed for browsers calling the API directly (the console uses the Next.js proxy).
       CORS_ORIGINS: http://localhost:${WEB_PORT:-3000}
     depends_on:
       floci:
@@ -73,9 +74,9 @@ services:
   frontend:
     build:
       context: ./frontend
-      args:
-        # Inlined into the client bundle at build time; must be reachable from the host browser.
-        NEXT_PUBLIC_API_URL: http://localhost:${API_PORT:-8080}
+    environment:
+      # Read at runtime by the /api/v1 proxy route; compose-internal address.
+      API_INTERNAL_URL: http://backend:8080
     ports:
       - "${WEB_PORT:-3000}:3000"
     depends_on:

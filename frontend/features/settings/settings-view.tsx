@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
-import { api, API_URL } from "@/lib/api";
+import { api, API_BASE_PATH } from "@/lib/api";
 import { Badge, Button, ErrorAlert, Loading, Panel, SelectField } from "@/components/ui";
 import { PageHeader } from "@/components/layout/page-header";
 import { useFlociStatus, useRegions } from "@/hooks/use-queries";
@@ -63,10 +63,10 @@ export function SettingsView() {
         </Panel>
 
         <div className="flex flex-col gap-4">
-          <Panel title="Go API" description="The browser calls the Go API directly (NEXT_PUBLIC_API_URL).">
+          <Panel title="Go API" description="The browser reaches the Go API through the console server (API_INTERNAL_URL).">
             <dl className="grid grid-cols-[9rem_1fr] gap-y-2.5 text-sm">
-              <Row label="URL">
-                <span className="font-mono text-[13px]">{API_URL}</span>
+              <Row label="Path">
+                <span className="font-mono text-[13px]">{API_BASE_PATH}</span>
               </Row>
               <Row label="Health">
                 {health.isPending ? (

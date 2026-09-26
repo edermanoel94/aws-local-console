@@ -16,7 +16,15 @@ import type {
   ServiceSummary,
 } from "@/types/api";
 
-export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+/**
+ * The browser calls the Go API through the same-origin proxy at `/api/v1` (app/api/v1/[...path]/route.ts),
+ * so the console works on any host it is opened from. On the server, requests go straight to API_INTERNAL_URL.
+ */
+export const API_BASE_PATH = "/api/v1";
+
+function apiOrigin(): string {
+  return typeof window === "undefined" ? (process.env.API_INTERNAL_URL ?? "http://localhost:8080") : window.location.origin;
+}
 
 /** Error for non-2xx responses of the Go API itself (not AWS errors, which come inside ExecuteResponse). */
 export class ApiError extends Error {
@@ -33,7 +41,7 @@ export class ApiError extends Error {
 type Query = Record<string, string | number | undefined | null>;
 
 function buildUrl(path: string, query?: Query): string {
-  const url = new URL(`/api/v1${path}`, API_URL);
+  const url = new URL(`${API_BASE_PATH}${path}`, apiOrigin());
   for (const [key, value] of Object.entries(query ?? {})) {
     if (value !== undefined && value !== null && value !== "") url.searchParams.set(key, String(value));
   }
@@ -49,7 +57,7 @@ async function request<T>(path: string, init?: RequestInit & { query?: Query }):
       cache: "no-store",
     });
   } catch (err) {
-    throw new ApiError(0, "NetworkError", `Go API unreachable at ${API_URL}: ${(err as Error).message}`);
+    throw new ApiError(0, "NetworkError", `Console server unreachable: ${(err as Error).message}`);
   }
   const text = await res.text();
   const body = text ? JSON.parse(text) : undefined;

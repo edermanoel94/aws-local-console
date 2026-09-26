@@ -23,7 +23,11 @@ export const cleanup = {
   queue: (name: string) => executeForCleanup("sqs", "DeleteQueue", { QueueUrl: `http://localhost:4566/000000000000/${name}` }),
   table: (name: string) => executeForCleanup("dynamodb", "DeleteTable", { TableName: name }),
   topic: (name: string) => executeForCleanup("sns", "DeleteTopic", { TopicArn: `arn:aws:sns:us-east-1:000000000000:${name}` }),
-  function: (name: string) => executeForCleanup("lambda", "DeleteFunction", { FunctionName: name }),
+  /** Deletes the function and its log group: like real AWS, Floci keeps /aws/lambda/<name> after DeleteFunction. */
+  async function(name: string) {
+    await executeForCleanup("lambda", "DeleteFunction", { FunctionName: name });
+    await executeForCleanup("logs", "DeleteLogGroup", { logGroupName: `/aws/lambda/${name}` });
+  },
   async eventSourceMappings(functionName: string) {
     const out = (await executeForCleanup("lambda", "ListEventSourceMappings", { FunctionName: functionName })) as { EventSourceMappings?: { UUID?: string }[] } | undefined;
     for (const m of out?.EventSourceMappings ?? []) {

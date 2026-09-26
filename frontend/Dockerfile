@@ -24,11 +24,8 @@ RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
     pnpm install --frozen-lockfile --store-dir /pnpm/store
 
 FROM base AS builder
-# The browser calls the Go API directly, so this must be an address reachable
-# from the host running the browser, not a compose-internal hostname.
-# NEXT_PUBLIC_* variables are inlined into the client bundle at build time.
-ARG NEXT_PUBLIC_API_URL=http://localhost:8080
-ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+# No API address is baked into the bundle: the browser calls /api/v1 on this
+# server, which proxies to API_INTERNAL_URL read at runtime (see the runner stage).
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN corepack install && pnpm build
@@ -37,7 +34,8 @@ FROM node:${NODE_VERSION}-alpine AS runner
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
     PORT=3000 \
-    HOSTNAME=0.0.0.0
+    HOSTNAME=0.0.0.0 \
+    API_INTERNAL_URL=http://backend:8080
 WORKDIR /app
 # The official node image ships an unprivileged `node` user (uid 1000).
 COPY --from=builder --chown=node:node /app/public ./public

@@ -53,8 +53,6 @@ jobs:
 
       - name: Build frontend
         working-directory: frontend
-        env:
-          NEXT_PUBLIC_API_URL: http://localhost:${{ env.API_PORT }}
         run: pnpm build
 
       - name: Build backend

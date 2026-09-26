@@ -28,6 +28,22 @@ test.describe("Dashboard", () => {
     await expect(nav.getByRole("link", { name: "Dashboard", exact: true })).toHaveAttribute("aria-current", "page");
   });
 
+  test("works when opened from another host name (API is proxied through the console origin)", async ({ page, baseURL }) => {
+    // Regression: the browser used to call the Go API directly, so any origin other than
+    // http://localhost:3000 (127.0.0.1, a LAN IP, a tunnel) failed with "Failed to fetch".
+    const url = new URL("/dashboard", baseURL);
+    url.hostname = url.hostname === "localhost" ? "127.0.0.1" : "localhost";
+    await page.goto(url.toString());
+
+    // Before the fix the status pill said "API offline" and every panel stayed in its loading state.
+    await expect(page.getByRole("banner").getByRole("link", { name: /Floci.*Healthy/ })).toBeVisible();
+    const status = page.getByRole("region", { name: "Floci Status" });
+    await expect(status.getByText("Healthy", { exact: true })).toBeVisible();
+    // The stat cards show "-" when the API call fails, so a number proves data arrived through the proxy.
+    await expect(page.getByRole("region", { name: "Services", exact: true })).toContainText(/\d+/);
+    await expect(page.getByText(/API offline|unreachable|Failed to fetch/i)).toHaveCount(0);
+  });
+
   test("dashboard should display Floci status (SPEC 15)", async ({ page }) => {
     await page.goto("/dashboard");
     const status = page.getByRole("region", { name: "Floci Status" });

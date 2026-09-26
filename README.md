@@ -43,7 +43,8 @@ You can list, create, inspect, edit and delete resources, run arbitrary AWS oper
   Playwright (tests/e2e/) -> Browser -> Next.js -> Go API -> Floci
 ```
 
-The browser calls the Go API directly, so the API URL is baked into the frontend bundle at build time (`NEXT_PUBLIC_API_URL`).
+The browser only talks to Next.js: it calls `/api/v1/*` on the same origin, and a Next.js route handler proxies those requests to the Go API (`API_INTERNAL_URL`, read at runtime).
+So the console works however it is opened (localhost, 127.0.0.1, a LAN IP, a tunnel or another device), with no CORS setup and no API URL baked into the frontend image.
 The shared contract between the three parts lives in [docs/CONTRACT.md](docs/CONTRACT.md), and the product specification in [SPEC.md](SPEC.md).
 
 ## Requirements
@@ -100,7 +101,7 @@ PORT=8080 CORS_ORIGINS=http://localhost:3000 go run ./cmd/api
 
 cd frontend
 pnpm install
-NEXT_PUBLIC_API_URL=http://localhost:8080 pnpm dev
+API_INTERNAL_URL=http://localhost:8080 pnpm dev
 ```
 
 If `pnpm` is not on your `PATH`, run `corepack enable pnpm` once, or prefix the commands with `corepack`.
@@ -129,8 +130,8 @@ Host ports are configurable, which helps when a default port is already taken:
 | Variable | Default | Used for |
 |---|---|---|
 | `FLOCI_PORT` | `4566` | Floci host port |
-| `API_PORT` | `8080` | Go API host port, also used to build `NEXT_PUBLIC_API_URL` |
-| `WEB_PORT` | `3000` | Next.js host port, also used for the API `CORS_ORIGINS` |
+| `API_PORT` | `8080` | Go API host port (for tests and direct API use; the console reaches the API through Next.js) |
+| `WEB_PORT` | `3000` | Next.js host port |
 
 Pass them to Make or export them before calling Docker Compose:
 
@@ -149,13 +150,13 @@ Go API environment variables:
 | `AWS_ACCESS_KEY_ID` | `test` | Credentials accepted by Floci |
 | `AWS_SECRET_ACCESS_KEY` | `test` | Credentials accepted by Floci |
 | `PORT` | `8080` | Port the API listens on |
-| `CORS_ORIGINS` | `http://localhost:3000` | Origins allowed to call the API from the browser |
+| `CORS_ORIGINS` | `http://localhost:3000` | Origins allowed to call the API directly from a browser (not needed by the console) |
 
 Frontend environment variables:
 
 | Variable | Default | Description |
 |---|---|---|
-| `NEXT_PUBLIC_API_URL` | `http://localhost:8080` | Go API URL as seen by the browser, inlined at build time (Docker build arg) |
+| `API_INTERNAL_URL` | `http://localhost:8080` | Go API URL as seen by the Next.js server, read at runtime (`http://backend:8080` in Compose) |
 
 Playwright environment variables:
 
