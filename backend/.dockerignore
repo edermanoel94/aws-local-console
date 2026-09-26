@@ -1,0 +1,16 @@
+# Only Go sources and module files are needed to build the API image.
+bin
+tmp
+dist
+coverage*
+*.out
+*.test
+*.log
+.env*
+.git
+.gitignore
+.idea
+.vscode
+Dockerfile
+.dockerignore
+.DS_Store

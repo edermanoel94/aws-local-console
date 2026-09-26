@@ -1,0 +1,115 @@
+name: E2E
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CI: "true"
+  COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
+  FLOCI_PORT: "4566"
+  API_PORT: "8080"
+  WEB_PORT: "3000"
+
+jobs:
+  e2e:
+    name: Playwright (Floci + Go API + Next.js)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Enable corepack (pnpm version from packageManager)
+        run: corepack enable pnpm && pnpm --version
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+
+      - name: Install dependencies (root / Playwright)
+        run: pnpm install --frozen-lockfile
+
+      - name: Install dependencies (frontend)
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+
+      - name: Build frontend
+        working-directory: frontend
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:${{ env.API_PORT }}
+        run: pnpm build
+
+      - name: Build backend
+        working-directory: backend
+        run: go build -o bin/api ./cmd/api
+
+      - name: Install Playwright browser
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Start Docker Compose
+        run: docker compose up -d --build --wait
+
+      - name: Wait for Floci, API and Next.js
+        run: make wait
+
+      - name: Run Playwright
+        env:
+          TEST_RUN_ID: gh-${{ github.run_id }}-${{ github.run_attempt }}
+          BASE_URL: http://localhost:${{ env.WEB_PORT }}
+          API_URL: http://localhost:${{ env.API_PORT }}
+          FLOCI_ENDPOINT: http://localhost:${{ env.FLOCI_PORT }}
+        run: pnpm exec playwright test
+
+      - name: Upload Playwright report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v5
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14
+          if-no-files-found: ignore
+
+      - name: Upload test results (screenshots, videos, traces)
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v5
+        with:
+          name: test-results
+          path: test-results/
+          retention-days: 14
+          if-no-files-found: ignore
+
+      - name: Docker Compose logs
+        if: ${{ failure() }}
+        run: |
+          docker compose ps --all
+          docker compose logs --no-color --timestamps | tee compose-logs.txt
+
+      - name: Upload Docker Compose logs
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v5
+        with:
+          name: compose-logs
+          path: compose-logs.txt
+          if-no-files-found: ignore
+
+      - name: Stop Docker Compose
+        if: ${{ always() }}
+        run: make clean

@@ -1,8 +1,42 @@
+# AWS Local Console - full local stack: Floci (AWS emulator) + Go API + Next.js.
+#
+# Host ports are configurable (defaults in parentheses):
+#   FLOCI_PORT (4566), API_PORT (8080), WEB_PORT (3000)
+# e.g. `API_PORT=18080 WEB_PORT=13000 docker compose up -d --build --wait`.
+# The browser talks to the Go API directly, so the frontend is built with
+# NEXT_PUBLIC_API_URL=http://localhost:${API_PORT} and the API allows CORS from
+# http://localhost:${WEB_PORT}.
+#
+# Floci / Lambda networking notes (verified against floci/floci 2.1.0):
+# - Lambda functions run as sibling containers started through the mounted
+#   Docker socket (the image entrypoint grants its unprivileged user the
+#   socket's group automatically; no `user: root` needed).
+# - When Floci detects it runs in a container, it attaches Lambda containers to
+#   its own network and gives them AWS_LAMBDA_RUNTIME_API=<floci-ip>:12000-12499
+#   and AWS_ENDPOINT_URL=http://localhost.floci.io:4566. Floci's embedded DNS
+#   resolves *.localhost.floci.io to the Floci container, so function code
+#   using the AWS SDK reaches Floci without extra settings.
+# - We still pin the network name and pass it explicitly through
+#   FLOCI_SERVICES_LAMBDA_DOCKER_NETWORK so Lambda placement does not depend on
+#   auto-detection or on the compose project (directory) name.
+# - FLOCI_HOSTNAME is intentionally NOT set: it would make Floci return URLs
+#   such as http://floci:4566/... (e.g. SQS queue URLs), which are not
+#   resolvable from the host browser nor from an API started with `go run`.
+# - Lambda containers carry the label `floci=true`; `make down/clean` removes
+#   leftovers so the compose network can be deleted.
+# - Other useful knobs: FLOCI_SERVICES_LAMBDA_EPHEMERAL=true (no warm pool),
+#   FLOCI_SERVICES_LAMBDA_DOCKER_HOST_OVERRIDE (rootless Podman and other
+#   unusual topologies).
+
+name: aws-dash-local
+
 services:
   floci:
     image: floci/floci:latest
     ports:
-      - "4566:4566"
+      - "${FLOCI_PORT:-4566}:4566"
+    environment:
+      FLOCI_SERVICES_LAMBDA_DOCKER_NETWORK: aws-local-console
     volumes:
       # Lambda functions run as sibling containers
       - /var/run/docker.sock:/var/run/docker.sock
@@ -12,3 +46,49 @@ services:
       interval: 3s
       timeout: 3s
       retries: 40
+
+  backend:
+    build:
+      context: ./backend
+    ports:
+      - "${API_PORT:-8080}:8080"
+    environment:
+      PORT: "8080"
+      FLOCI_ENDPOINT: http://floci:4566
+      AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      CORS_ORIGINS: http://localhost:${WEB_PORT:-3000}
+    depends_on:
+      floci:
+        condition: service_healthy
+    healthcheck:
+      # The backend runtime image is alpine-based, so busybox wget is available.
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/api/v1/health"]
+      interval: 3s
+      timeout: 3s
+      start_period: 5s
+      retries: 40
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # Inlined into the client bundle at build time; must be reachable from the host browser.
+        NEXT_PUBLIC_API_URL: http://localhost:${API_PORT:-8080}
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      # Any non-5xx answer from the Next.js server (redirects not followed).
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/', { redirect: 'manual' }).then((r) => process.exit(r.status < 500 ? 0 : 1), () => process.exit(1))"]
+      interval: 3s
+      timeout: 3s
+      start_period: 5s
+      retries: 40
+
+networks:
+  default:
+    name: aws-local-console
