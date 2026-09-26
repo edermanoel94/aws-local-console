@@ -56,21 +56,17 @@ export function ResourcesTab({ apiId }: { apiId: string }) {
   const [existingMethods, setExistingMethods] = useState<string[]>([]);
 
   return (
-    <div className="grid items-start gap-4 lg:grid-cols-[340px_1fr]">
+    <div className="grid items-start gap-4 lg:grid-cols-[300px_1fr] xl:grid-cols-[340px_1fr]">
       <Panel
         title="Resources"
         count={resources.data ? items.length : undefined}
-        bodyClassName="px-2! py-2!"
-        actions={
-          <>
-            <RefreshButton onClick={() => resources.refetch()} spinning={resources.isFetching} />
-            <Button onClick={() => setDialog("resource")} disabled={!resources.data}>
-              <Plus className="size-4" aria-hidden />
-              Create resource
-            </Button>
-          </>
-        }
+        bodyClassName="flex flex-col gap-2 px-2! py-2!"
+        actions={<RefreshButton onClick={() => resources.refetch()} spinning={resources.isFetching} />}
       >
+        <Button className="mx-1 mt-1" onClick={() => setDialog("resource")} disabled={!resources.data}>
+          <Plus className="size-4" aria-hidden />
+          Create resource
+        </Button>
         {resources.error ? (
           <ErrorAlert error={resources.error} />
         ) : resources.isLoading ? (
@@ -217,6 +213,18 @@ function ResourceDetail({ apiId, resource, onCreateMethod }: { apiId: string; re
 
 const INTEGRATION_LABELS: Record<string, string> = { AWS_PROXY: "Lambda proxy", MOCK: "Mock", HTTP_PROXY: "HTTP proxy", HTTP: "HTTP", AWS: "AWS service" };
 
+/** Only the fields that apply to the integration type (a mock has no endpoint or backend HTTP method). */
+function integrationDetails(integration: Method["MethodIntegration"], fnArn: string | null, mockStatus: string | undefined) {
+  const type = { label: "Integration type", value: integration?.Type ? (INTEGRATION_LABELS[integration.Type] ?? integration.Type) : "None" };
+  if (!integration?.Type) return [type];
+  if (integration.Type === "MOCK") return [type, { label: "Status code", value: mockStatus }];
+  return [
+    type,
+    fnArn ? { label: "Lambda function", value: nameFromArn(fnArn) } : { label: "Endpoint", value: integration.Uri, mono: true },
+    { label: "Integration HTTP method", value: integration.HttpMethod },
+  ];
+}
+
 function MethodDetail({ apiId, resource, httpMethod }: { apiId: string; resource: ApiResource; httpMethod: string }) {
   const method = useAwsQuery<Method>("apigateway", "GetMethod", { RestApiId: apiId, ResourceId: resource.Id, HttpMethod: httpMethod });
   const [removing, setRemoving] = useState(false);
@@ -227,7 +235,9 @@ function MethodDetail({ apiId, resource, httpMethod }: { apiId: string; resource
   });
   const integration = method.data?.MethodIntegration;
   const fnArn = functionArnFromUri(integration?.Uri);
-  const mockBody = Object.values(integration?.IntegrationResponses ?? {})[0]?.ResponseTemplates?.["application/json"];
+  const mockResponse = Object.values(integration?.IntegrationResponses ?? {})[0];
+  const mockBody = mockResponse?.ResponseTemplates?.["application/json"];
+  const mockStatus = mockResponse?.StatusCode;
 
   return (
     <Panel
@@ -249,25 +259,19 @@ function MethodDetail({ apiId, resource, httpMethod }: { apiId: string; resource
         <Loading />
       ) : (
         <div className="flex flex-col gap-5">
-          <div>
+          <section aria-label="Method request">
             <SectionTitle>Method request</SectionTitle>
             <DetailsGrid items={[{ label: "Authorization", value: method.data?.AuthorizationType ?? "NONE" }]} />
-          </div>
-          <div>
+          </section>
+          <section aria-label="Integration request">
             <SectionTitle>Integration request</SectionTitle>
-            <DetailsGrid
-              items={[
-                { label: "Integration type", value: integration?.Type ? (INTEGRATION_LABELS[integration.Type] ?? integration.Type) : "None" },
-                { label: fnArn ? "Lambda function" : "Endpoint", value: fnArn ? nameFromArn(fnArn) : integration?.Uri, mono: !fnArn },
-                { label: "Integration HTTP method", value: integration?.HttpMethod },
-              ]}
-            />
-          </div>
+            <DetailsGrid items={integrationDetails(integration, fnArn, mockStatus)} />
+          </section>
           {mockBody !== undefined && (
-            <div>
+            <section aria-label="Mock response template">
               <SectionTitle>Mock response template</SectionTitle>
               <pre className="max-h-60 overflow-auto rounded-lg border border-aws-border bg-aws-panel p-3 font-mono text-xs whitespace-pre-wrap">{prettyJson(mockBody)}</pre>
-            </div>
+            </section>
           )}
         </div>
       )}
@@ -428,6 +432,7 @@ function CreateMethodDialog({ apiId, resource, existing, onClose }: { apiId: str
           render={({ field }) => (
             <RadioCards
               legend="Integration type"
+              columns={3}
               name="integration-type"
               value={field.value}
               onChange={field.onChange}

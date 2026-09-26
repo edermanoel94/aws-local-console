@@ -70,10 +70,12 @@ export function FunctionDetail({ functionName }: { functionName: string }) {
                 { label: "Handler", value: f.Handler, mono: true },
                 { label: "Memory", value: f.MemorySize ? `${f.MemorySize} MB` : "-" },
                 { label: "Timeout", value: f.Timeout ? `${f.Timeout} sec` : "-" },
-                { label: "Function ARN", value: <CopyableText value={f.FunctionArn} label="Copy function ARN" /> },
+                { label: "Description", value: f.Description },
                 { label: "Last modified", value: formatDateTime(f.LastModified) },
                 { label: "Code size", value: formatBytes(f.CodeSize) },
-                { label: "Description", value: f.Description },
+                { label: "Package type", value: f.PackageType ?? "Zip" },
+                { label: "Function ARN", value: <CopyableText value={f.FunctionArn} label="Copy function ARN" />, wide: true },
+                { label: "Execution role", value: f.Role ? <CopyableText value={f.Role} label="Copy execution role ARN" /> : undefined, wide: true },
               ]}
             />
           </Panel>

@@ -142,7 +142,7 @@ function LogBlock({ text }: { text: string }) {
 }
 
 interface LogEvents {
-  events?: { timestamp?: number; message?: string }[] | null;
+  Events?: { Timestamp?: number; Message?: string }[] | null;
 }
 
 /** Floci does not return LogResult; tail the function's CloudWatch Logs group instead (polls for up to ~10 seconds). */
@@ -153,10 +153,10 @@ function LogsSince({ fn, since }: { fn: FunctionConfiguration; since: number }) 
     { LogGroupName: logGroupOf(fn), StartTime: since - 1000 },
     {
       retry: false,
-      refetchInterval: (query) => ((query.state.data?.events?.length ?? 0) > 0 || query.state.dataUpdateCount + query.state.errorUpdateCount >= 10 ? false : 1000),
+      refetchInterval: (query) => ((query.state.data?.Events?.length ?? 0) > 0 || query.state.dataUpdateCount + query.state.errorUpdateCount >= 10 ? false : 1000),
     },
   );
-  const events = logs.data?.events ?? [];
+  const events = logs.data?.Events ?? [];
   const gaveUp = Math.max(logs.dataUpdatedAt, logs.errorUpdatedAt) - since > 9000;
   if (logs.isLoading) return <Loading label="Loading logs" />;
   if (events.length === 0) {
@@ -166,5 +166,5 @@ function LogsSince({ fn, since }: { fn: FunctionConfiguration; since: number }) 
       </p>
     );
   }
-  return <LogBlock text={events.map((e) => (e.message ?? "").trimEnd()).join("\n")} />;
+  return <LogBlock text={events.map((e) => (e.Message ?? "").trimEnd()).join("\n")} />;
 }

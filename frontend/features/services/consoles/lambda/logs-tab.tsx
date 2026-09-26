@@ -7,7 +7,7 @@ import { RefreshButton } from "../_shared/resource-table";
 import { logGroupOf, type FunctionConfiguration } from "./lambda-types";
 
 interface FilteredEvents {
-  events?: { eventId?: string; timestamp?: number; message?: string; logStreamName?: string }[] | null;
+  Events?: { EventId?: string; Timestamp?: number; Message?: string; LogStreamName?: string }[] | null;
 }
 
 function isMissingGroup(err: unknown) {
@@ -18,7 +18,7 @@ function isMissingGroup(err: unknown) {
 export function LogsTab({ fn }: { fn: FunctionConfiguration }) {
   const group = logGroupOf(fn);
   const logs = useAwsQuery<FilteredEvents>("logs", "FilterLogEvents", { LogGroupName: group, Limit: 500 }, { retry: false });
-  const events = [...(logs.data?.events ?? [])].sort((a, b) => (b.timestamp ?? 0) - (a.timestamp ?? 0));
+  const events = [...(logs.data?.Events ?? [])].sort((a, b) => (b.Timestamp ?? 0) - (a.Timestamp ?? 0));
 
   return (
     <Panel
@@ -43,9 +43,9 @@ export function LogsTab({ fn }: { fn: FunctionConfiguration }) {
       ) : (
         <ol aria-label="Log events" className="divide-y divide-aws-border font-mono text-xs">
           {events.map((e, i) => (
-            <li key={e.eventId ?? i} className="grid gap-x-4 gap-y-1 px-5 py-2 md:grid-cols-[170px_1fr]">
-              <time className="whitespace-nowrap text-aws-muted">{formatDateTime(e.timestamp)}</time>
-              <span className="leading-5 break-all whitespace-pre-wrap">{(e.message ?? "").trimEnd()}</span>
+            <li key={e.EventId ?? i} className="grid gap-x-4 gap-y-1 px-5 py-2 md:grid-cols-[170px_1fr]">
+              <time className="whitespace-nowrap text-aws-muted">{formatDateTime(e.Timestamp)}</time>
+              <span className="leading-5 break-all whitespace-pre-wrap">{(e.Message ?? "").trimEnd()}</span>
             </li>
           ))}
         </ol>

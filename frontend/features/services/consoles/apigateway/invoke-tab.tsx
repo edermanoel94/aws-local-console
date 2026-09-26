@@ -9,7 +9,7 @@ import { Badge, Button, EmptyState, ErrorAlert, Loading, Panel, SelectField, Tab
 import { api } from "@/lib/api";
 import { useRegion } from "@/hooks/use-region";
 import type { ApiGatewayInvokeResponse } from "@/types/api";
-import { KeyValueEditor, SuggestField, fromKeyValues, type KeyValue } from "../_shared/controls";
+import { CopyableText, KeyValueEditor, SuggestField, fromKeyValues, type KeyValue } from "../_shared/controls";
 import { prettyJson } from "../_shared/format";
 import { DetailsGrid } from "../_shared/layout";
 import { HTTP_METHODS } from "./apigw-types";
@@ -101,10 +101,11 @@ function InvokeResponse({ response }: { response: ApiGatewayInvokeResponse }) {
     >
       <div className="flex flex-col gap-4">
         <DetailsGrid
+          columns={4}
           items={[
             { label: "Status code", value: String(response.status) },
             { label: "Duration", value: `${response.durationMs} ms` },
-            { label: "Request URL", value: response.url, mono: true },
+            { label: "Request URL", value: <CopyableText value={response.url} label="Copy request URL" />, wide: true },
           ]}
         />
         <div>

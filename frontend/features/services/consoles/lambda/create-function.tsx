@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ChangeEvent } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -88,10 +88,15 @@ export function CreateFunctionPage() {
     },
   });
 
-  const onRuntimeChange = (next: string) => {
+  // Swaps the handler and code templates when they were not edited. It runs before react-hook-form stores the new
+  // runtime (the register onChange option would run after it, when the previous runtime is already gone).
+  const runtimeField = form.register("runtime");
+  const onRuntimeChange = (event: ChangeEvent<HTMLSelectElement>) => {
     const previous = form.getValues("runtime");
+    const next = event.target.value;
     if (form.getValues("handler") === defaultHandler(previous)) form.setValue("handler", defaultHandler(next));
     if (form.getValues("code") === defaultCode(previous)) form.setValue("code", defaultCode(next));
+    return runtimeField.onChange(event);
   };
 
   const { errors } = form.formState;
@@ -123,7 +128,8 @@ export function CreateFunctionPage() {
             label="Runtime"
             description="The language used to write your function."
             options={RUNTIMES.map((r) => ({ value: r.value, label: r.label }))}
-            {...form.register("runtime", { onChange: (e) => onRuntimeChange(e.target.value) })}
+            {...runtimeField}
+            onChange={onRuntimeChange}
           />
           <TextField label="Handler" description="file.function that Lambda calls to start execution." error={errors.handler?.message} {...form.register("handler")} />
           <TextField label="Execution role" description="IAM role ARN assumed by the function." error={errors.role?.message} {...form.register("role")} />
