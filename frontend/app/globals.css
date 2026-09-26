@@ -71,3 +71,12 @@
   white-space: nowrap;
   border: 0;
 }
+
+/* React Flow attribution (kept visible per its MIT license terms), toned down to match the console */
+.react-flow__attribution {
+  background: transparent;
+  font-size: 10px;
+}
+.react-flow__attribution a {
+  color: var(--color-aws-muted);
+}

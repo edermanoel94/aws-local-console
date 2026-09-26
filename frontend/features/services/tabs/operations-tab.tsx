@@ -90,14 +90,14 @@ export function OperationsTab({ service: s }: { service: ServiceDetail }) {
               const required = o.inputFields.filter((f) => f.required).map((f) => f.name);
               return (
                 <Tr key={o.name}>
-                  <Td className="pl-5 font-mono text-[13px]">{o.name}</Td>
+                  <Td className="pl-5 font-mono text-[13px] [overflow-wrap:anywhere]">{o.name}</Td>
                   <Td>
                     <Badge tone={o.mutating ? "orange" : "blue"}>{o.mutating ? "Write" : "Read"}</Badge>
                   </Td>
                   <Td>
                     <CoverageBadge coverage={o.coverage} />
                   </Td>
-                  <Td className="max-w-80 truncate font-mono text-[12px] text-aws-muted" title={required.join(", ")}>
+                  <Td className="max-w-40 truncate xl:max-w-80 font-mono text-[12px] text-aws-muted" title={required.join(", ")}>
                     {required.length ? required.join(", ") : "-"}
                   </Td>
                   <Td className="pr-5 text-right">

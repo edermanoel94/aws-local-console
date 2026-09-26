@@ -256,7 +256,7 @@ export function LogsTable({ logs, selectedId, onSelect, showService = true }: { 
             </Td>
             <Td className="pr-5 text-right whitespace-nowrap text-aws-muted tabular-nums xl:pr-3">{formatDuration(l.durationMs)}</Td>
             <Td className="hidden whitespace-nowrap text-aws-muted xl:table-cell">{l.source}</Td>
-            <Td className="hidden max-w-56 truncate pr-5 xl:table-cell" title={l.resourceName}>
+            <Td className="hidden max-w-44 truncate pr-5 xl:table-cell 2xl:max-w-64" title={l.resourceName}>
               {l.resourceName ?? <span className="text-aws-muted">-</span>}
             </Td>
           </Tr>

@@ -27,14 +27,14 @@ export function ResourceTable({
           {showService && <Th>Service</Th>}
           <Th>Region</Th>
           <Th>ARN</Th>
-          <Th className={hasCreated ? undefined : "pr-5"}>Tags</Th>
-          {hasCreated && <Th className="pr-5">Created</Th>}
+          <Th className={hasCreated ? "pr-5 xl:pr-3" : "pr-5"}>Tags</Th>
+          {hasCreated && <Th className="hidden pr-5 xl:table-cell">Created</Th>}
         </tr>
       </thead>
       <tbody>
         {resources.map((r) => (
           <Tr key={r.id} selected={r.id === selectedId} className="cursor-pointer" onClick={() => onSelect(r.id)}>
-            <Td className="max-w-72 pl-5">
+            <Td className="max-w-56 pl-5 xl:max-w-64">
               <button
                 type="button"
                 onClick={(e) => {
@@ -56,12 +56,12 @@ export function ResourceTable({
               </Td>
             )}
             <Td className="whitespace-nowrap text-aws-muted">{r.region}</Td>
-            <Td className="max-w-96">
+            <Td className="max-w-52 xl:max-w-72">
               <span className="block truncate font-mono text-[12px] text-aws-muted" title={r.arn}>
                 {r.arn}
               </span>
             </Td>
-            <Td className={hasCreated ? undefined : "pr-5"}>
+            <Td className={hasCreated ? "pr-5 xl:pr-3" : "pr-5"}>
               {r.tags.length === 0 ? (
                 <span className="text-aws-muted">-</span>
               ) : (
@@ -75,7 +75,7 @@ export function ResourceTable({
                 </span>
               )}
             </Td>
-            {hasCreated && <Td className="pr-5 font-mono text-[12px] whitespace-nowrap text-aws-muted">{formatDateTime(r.createdAt)}</Td>}
+            {hasCreated && <Td className="hidden pr-5 xl:table-cell font-mono text-[12px] whitespace-nowrap text-aws-muted">{formatDateTime(r.createdAt)}</Td>}
           </Tr>
         ))}
       </tbody>

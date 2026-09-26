@@ -151,7 +151,6 @@ export function ArchitectureView() {
               nodesConnectable={false}
               onNodeClick={(_, node) => setSelectedId(node.id)}
               onPaneClick={() => setSelectedId(null)}
-              proOptions={{ hideAttribution: true }}
             >
               <Background gap={20} size={1.2} color="#d5dbdb" />
               <Controls showInteractive={false} position="bottom-left" />

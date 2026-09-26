@@ -165,7 +165,7 @@ export function EventsExplorer() {
                   <Td>
                     <Badge tone={typeTone(ev.type)}>{ev.type}</Badge>
                   </Td>
-                  <Td className="max-w-72">
+                  <Td className="max-w-52 xl:max-w-72">
                     <button
                       type="button"
                       className="max-w-full truncate text-left text-aws-link hover:underline"
@@ -178,7 +178,7 @@ export function EventsExplorer() {
                     </button>
                     {ev.related.length > 0 && <p className="text-xs text-aws-muted">+{ev.related.length} related</p>}
                   </Td>
-                  <Td className="pr-5 font-mono text-[13px] 2xl:pr-3">{ev.operation}</Td>
+                  <Td className="max-w-48 truncate pr-5 font-mono text-[13px] xl:max-w-none 2xl:pr-3" title={ev.operation}>{ev.operation}</Td>
                   <Td className="hidden pr-5 whitespace-nowrap text-aws-muted 2xl:table-cell">{ev.region}</Td>
                 </Tr>
               ))}
