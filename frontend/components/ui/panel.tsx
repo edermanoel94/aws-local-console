@@ -22,7 +22,7 @@ export function Panel({
   return (
     <section className={cn("rounded-2xl border border-aws-border bg-white shadow-sm", className)}>
       {(title || actions) && (
-        <header className="flex flex-wrap items-start justify-between gap-3 border-b border-aws-border px-5 py-3">
+        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-aws-border px-5 py-3">
           <div className="min-w-0">
             {title && (
               <h2 className="text-lg font-bold text-aws-ink">

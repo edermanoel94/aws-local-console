@@ -21,15 +21,53 @@
   --font-mono: var(--font-jetbrains-mono), ui-monospace, Menlo, monospace;
 }
 
-html,
-body {
-  background: var(--color-aws-page);
-  color: var(--color-aws-ink);
+/* Base styles live in the base layer so Tailwind utilities (e.g. text-*, no-underline on links) can override them. */
+@layer base {
+  html,
+  body {
+    background: var(--color-aws-page);
+    color: var(--color-aws-ink);
+  }
+
+  a {
+    color: var(--color-aws-link);
+  }
+  a:hover {
+    text-decoration: underline;
+  }
 }
 
-a {
-  color: var(--color-aws-link);
+@keyframes drawer-in {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
-a:hover {
-  text-decoration: underline;
+
+@keyframes palette-in {
+  from {
+    transform: translateY(-6px) scale(0.99);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+/* Visually hidden but still reachable by assistive technology and Playwright (text mirrors of canvas widgets). */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
 }

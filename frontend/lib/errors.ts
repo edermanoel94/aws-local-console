@@ -24,7 +24,8 @@ export function toDisplayError(err: unknown): DisplayError {
     return { title: TITLES[kind], code, message, kind };
   }
   if (err instanceof ApiError) {
-    const kind = err.status === 0 ? "network" : "api";
+    // 400/404 from the Go API are request validation problems (unknown service/operation, malformed input).
+    const kind = err.status === 0 ? "network" : err.status === 400 || err.status === 404 ? "validation" : "api";
     return { title: TITLES[kind], code: err.code, message: err.message, kind };
   }
   const message = err instanceof Error ? err.message : String(err);

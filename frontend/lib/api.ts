@@ -1,4 +1,6 @@
 import type {
+  ApiGatewayInvokeRequest,
+  ApiGatewayInvokeResponse,
   ArchitectureGraph,
   CliResult,
   ConsoleSource,
@@ -83,6 +85,13 @@ export const api = {
     }),
   cli: (command: string, region?: string) =>
     request<CliResult>("/cli/execute", { method: "POST", body: JSON.stringify({ command, region }) }),
+  /** Calls a deployed API Gateway REST API stage through the Go API (Floci has no TestInvokeMethod). */
+  apigatewayInvoke: (req: ApiGatewayInvokeRequest, source: ConsoleSource = "console") =>
+    request<ApiGatewayInvokeResponse>("/apigateway/invoke", {
+      method: "POST",
+      body: JSON.stringify(req),
+      headers: { "X-Console-Source": source },
+    }),
 };
 
 /**

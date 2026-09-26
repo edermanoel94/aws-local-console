@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { JetBrains_Mono, Open_Sans } from "next/font/google";
+import { AppShell } from "@/components/layout/app-shell";
 import { Providers } from "./providers";
 import "./globals.css";
 
@@ -15,8 +16,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${openSans.variable} ${jetbrainsMono.variable} h-full antialiased`}>
       <body className="min-h-full font-sans">
-        {/* The app shell (top bar, sidebar, global search) is owned by components/layout/app-shell.tsx */}
-        <Providers>{children}</Providers>
+        <Providers>
+          <AppShell>{children}</AppShell>
+        </Providers>
       </body>
     </html>
   );

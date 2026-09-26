@@ -9,3 +9,4 @@ export * from "./panel";
 export * from "./states";
 export * from "./table";
 export * from "./tabs";
+export * from "./drawer";

@@ -31,7 +31,8 @@ export interface OperationInfo {
   mutating: boolean;
   coverage: Coverage;
   inputExample: Record<string, unknown>;
-  inputFields: { name: string; type: string; required: boolean }[];
+  /** enum: allowed values when the member is an SDK enum (or a list of enums). */
+  inputFields: { name: string; type: string; required: boolean; enum?: string[] }[];
 }
 
 export interface ServiceDetail extends ServiceSummary {
@@ -74,6 +75,8 @@ export interface ExecuteResponse {
   response: {
     output?: unknown;
     headers?: Record<string, string>;
+    /** Raw error body from Floci, only when httpStatus >= 400. */
+    body?: string;
   };
   error?: ExecutionError;
 }
@@ -143,6 +146,8 @@ export interface ResourceEvent {
 export interface ArchitectureGraph {
   nodes: { id: string; service: string; type: string; name: string; arn: string }[];
   edges: { id: string; source: string; target: string; label: string }[];
+  /** Partial failures while collecting (the graph is still returned). */
+  errors?: { service: string; message: string }[];
 }
 
 export interface FlociStatus {
@@ -174,4 +179,26 @@ export interface CliResult {
 
 export interface ApiErrorBody {
   error: { code: string; message: string };
+}
+
+// POST /api/v1/apigateway/invoke - proxies a request to a deployed REST API stage on Floci.
+export interface ApiGatewayInvokeRequest {
+  restApiId: string;
+  stage: string;
+  /** Default GET. */
+  method?: string;
+  /** Resource path with optional query string, e.g. "/hello?x=1". */
+  path?: string;
+  headers?: Record<string, string>;
+  body?: string;
+  region?: string;
+}
+
+export interface ApiGatewayInvokeResponse {
+  status: number;
+  headers: Record<string, string>;
+  body: string;
+  durationMs: number;
+  url: string;
+  logId: string;
 }
