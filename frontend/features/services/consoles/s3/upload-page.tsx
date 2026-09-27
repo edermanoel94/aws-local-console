@@ -127,7 +127,7 @@ export function UploadPage({ bucket }: { bucket: string }) {
                     if (!form.getValues("contentType")) form.setValue("contentType", f.type);
                   }
                 }}
-                className="text-sm file:mr-3 file:rounded-full file:border file:border-aws-border-strong file:bg-white file:px-4 file:py-1 file:text-sm file:font-bold file:text-aws-ink hover:file:bg-aws-panel"
+                className="text-sm file:mr-3 file:rounded-full file:border file:border-aws-border-strong file:bg-aws-surface file:px-4 file:py-1 file:text-sm file:font-bold file:text-aws-ink hover:file:bg-aws-panel"
               />
               {file && (
                 <p className="text-xs text-aws-muted">

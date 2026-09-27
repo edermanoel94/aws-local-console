@@ -4,11 +4,11 @@ import { cn } from "@/lib/cn";
 type Tone = "green" | "red" | "gray" | "blue" | "orange";
 
 const TONES: Record<Tone, string> = {
-  green: "bg-green-50 text-aws-green border-aws-green",
-  red: "bg-red-50 text-aws-red border-aws-red",
+  green: "bg-aws-success-bg text-aws-green border-aws-green",
+  red: "bg-aws-error-bg text-aws-red border-aws-red",
   gray: "bg-aws-panel text-aws-muted border-aws-border-strong",
-  blue: "bg-blue-50 text-aws-link border-aws-link",
-  orange: "bg-orange-50 text-aws-orange-dark border-aws-orange",
+  blue: "bg-aws-info-bg text-aws-link border-aws-link",
+  orange: "bg-aws-warning-bg text-aws-orange-dark border-aws-orange",
 };
 
 export function Badge({ tone = "gray", children, className }: { tone?: Tone; children: ReactNode; className?: string }) {

@@ -35,7 +35,7 @@ export function SearchInput({ value, onChange, placeholder, label = "Search" }: 
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full rounded-lg border border-aws-border-strong bg-white py-1.5 pr-2.5 pl-8 text-sm text-aws-ink placeholder:text-aws-muted focus:border-aws-link focus:ring-1 focus:ring-aws-link focus:outline-none"
+        className="w-full rounded-lg border border-aws-border-strong bg-aws-surface py-1.5 pr-2.5 pl-8 text-sm text-aws-ink placeholder:text-aws-muted focus:border-aws-link focus:ring-1 focus:ring-aws-link focus:outline-none"
       />
     </div>
   );

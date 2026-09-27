@@ -22,7 +22,7 @@ export function CoverageTab({ service: s }: { service: ServiceDetail }) {
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         {CARDS.map((c) => (
-          <section key={c.key} aria-label={`${c.label} operations`} className="rounded-2xl border border-aws-border bg-white px-5 py-4 shadow-sm">
+          <section key={c.key} aria-label={`${c.label} operations`} className="rounded-2xl border border-aws-border bg-aws-surface px-5 py-4 shadow-sm">
             <h2 className="text-sm font-bold text-aws-muted">{c.label}</h2>
             <p className={cn("mt-1 text-3xl font-light tabular-nums", c.tone)}>
               {s.coverage[c.key]}

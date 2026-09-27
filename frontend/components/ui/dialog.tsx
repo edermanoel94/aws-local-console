@@ -35,7 +35,7 @@ export function Dialog({ open, onClose, title, children, footer, size = "md" }: 
         onClose();
       }}
       className={cn(
-        "m-auto w-[calc(100%-2rem)] rounded-2xl border border-aws-border bg-white p-0 text-aws-ink shadow-xl backdrop:bg-aws-navy/50",
+        "m-auto w-[calc(100%-2rem)] rounded-2xl border border-aws-border bg-aws-surface p-0 text-aws-ink shadow-xl backdrop:bg-aws-navy/50",
         size === "md" && "max-w-lg",
         size === "lg" && "max-w-2xl",
         size === "xl" && "max-w-4xl",

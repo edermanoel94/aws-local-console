@@ -4,9 +4,9 @@ import { cn } from "@/lib/cn";
 type Variant = "primary" | "secondary" | "danger" | "ghost";
 
 const VARIANTS: Record<Variant, string> = {
-  primary: "bg-aws-orange text-aws-ink border-aws-orange hover:bg-aws-orange-dark",
-  secondary: "bg-white text-aws-ink border-aws-border-strong hover:bg-aws-panel",
-  danger: "bg-white text-aws-red border-aws-red hover:bg-red-50",
+  primary: "bg-aws-orange text-aws-on-accent border-aws-orange hover:bg-aws-orange-dark",
+  secondary: "bg-aws-surface text-aws-ink border-aws-border-strong hover:bg-aws-panel",
+  danger: "bg-aws-surface text-aws-red border-aws-red hover:bg-aws-error-bg",
   ghost: "bg-transparent text-aws-link border-transparent hover:bg-aws-panel",
 };
 

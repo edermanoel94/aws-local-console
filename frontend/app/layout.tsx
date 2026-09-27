@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { JetBrains_Mono, Open_Sans } from "next/font/google";
 import { AppShell } from "@/components/layout/app-shell";
+import { THEME_BOOTSTRAP_SCRIPT } from "@/lib/theme";
 import { Providers } from "./providers";
 import "./globals.css";
 
@@ -14,7 +15,11 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${openSans.variable} ${jetbrainsMono.variable} h-full antialiased`}>
+    // The bootstrap script sets the theme class on <html> before hydration, so its attributes may differ from the server's.
+    <html lang="en" className={`${openSans.variable} ${jetbrainsMono.variable} h-full antialiased`} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP_SCRIPT }} />
+      </head>
       <body className="min-h-full font-sans">
         <Providers>
           <AppShell>{children}</AppShell>

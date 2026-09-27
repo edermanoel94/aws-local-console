@@ -79,7 +79,7 @@ export function SendEventsPage() {
       </Panel>
       {send.error && <ErrorAlert error={send.error} />}
       {eventId && !send.isPending && (
-        <p className="flex items-center gap-2 rounded-lg border border-aws-green bg-green-50 px-3 py-2 text-sm">
+        <p className="flex items-center gap-2 rounded-lg border border-aws-green bg-aws-success-bg px-3 py-2 text-sm">
           <CheckCircle2 className="size-4 text-aws-green" aria-hidden />
           Last event accepted with ID <span className="font-mono text-xs">{eventId}</span>
         </p>

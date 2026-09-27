@@ -70,7 +70,7 @@ export function ServiceDetailView({ serviceId }: { serviceId: string }) {
       <>
         <PageHeader title={serviceId} breadcrumbs={crumbs} />
         {notFound ? (
-          <div className="rounded-2xl border border-aws-border bg-white">
+          <div className="rounded-2xl border border-aws-border bg-aws-surface">
             <EmptyState title="No such service" description={`"${serviceId}" is not registered in the console.`} action={<Link href="/services">Browse services</Link>} />
           </div>
         ) : (
@@ -95,10 +95,10 @@ export function ServiceDetailView({ serviceId }: { serviceId: string }) {
         icon={<ServiceIcon service={s.id} category={s.category} size="lg" />}
         actions={
           <>
-            <FavoriteToggle serviceId={s.id} label={s.shortName} className="border border-aws-border-strong bg-white p-[7px]" />
+            <FavoriteToggle serviceId={s.id} label={s.shortName} className="border border-aws-border-strong bg-aws-surface p-[7px]" />
             <Link
               href={`/api-explorer?service=${encodeURIComponent(s.id)}`}
-              className="inline-flex h-8 items-center gap-1.5 rounded-full border border-aws-border-strong bg-white px-4 text-sm font-bold text-aws-ink no-underline hover:bg-aws-panel"
+              className="inline-flex h-8 items-center gap-1.5 rounded-full border border-aws-border-strong bg-aws-surface px-4 text-sm font-bold text-aws-ink no-underline hover:bg-aws-panel"
             >
               <Braces className="size-4" aria-hidden /> Open API Explorer
             </Link>

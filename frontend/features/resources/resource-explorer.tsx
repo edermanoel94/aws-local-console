@@ -11,7 +11,7 @@ import { ResourceDetail } from "./resource-detail";
 import { useUpdateSearchParams } from "@/hooks/use-update-search-params";
 
 const INPUT =
-  "h-[34px] w-full rounded-lg border border-aws-border-strong bg-white px-2.5 text-sm placeholder:text-aws-muted focus:border-aws-link focus:ring-1 focus:ring-aws-link focus:outline-none";
+  "h-[34px] w-full rounded-lg border border-aws-border-strong bg-aws-surface px-2.5 text-sm placeholder:text-aws-muted focus:border-aws-link focus:ring-1 focus:ring-aws-link focus:outline-none";
 
 /** Cross-service resource search with service / region / tag filters and a detail drawer. */
 export function ResourceExplorer() {
@@ -132,7 +132,7 @@ export function ResourceExplorer() {
         </div>
 
         {resources.data && resources.data.errors.length > 0 && (
-          <div className="flex items-start gap-2 border-b border-aws-border bg-orange-50 px-5 py-2 text-sm">
+          <div className="flex items-start gap-2 border-b border-aws-border bg-aws-warning-bg px-5 py-2 text-sm">
             <AlertTriangle className="mt-0.5 size-4 shrink-0 text-aws-orange-dark" aria-hidden />
             <p>
               Some services could not be listed:{" "}

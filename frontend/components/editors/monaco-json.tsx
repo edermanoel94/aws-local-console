@@ -3,6 +3,7 @@
 import "./monaco-setup";
 import Editor, { type OnMount } from "@monaco-editor/react";
 import { monospaceFontFamily } from "@/lib/fonts";
+import { useResolvedTheme } from "@/hooks/use-theme";
 
 export interface MonacoJsonProps {
   value: string;
@@ -16,6 +17,7 @@ export interface MonacoJsonProps {
 /** Monaco instance configured for compact JSON editing. Loaded client-only by JsonEditor. */
 export default function MonacoJson({ value, onChange, onReady, readOnly, height, language = "json" }: MonacoJsonProps) {
   const handleMount: OnMount = () => onReady();
+  const theme = useResolvedTheme();
   return (
     <Editor
       height={height}
@@ -24,7 +26,7 @@ export default function MonacoJson({ value, onChange, onReady, readOnly, height,
       onChange={(v) => onChange(v ?? "")}
       onMount={handleMount}
       loading={null}
-      theme="vs"
+      theme={`aws-${theme}`}
       options={{
         ariaLabel: "JSON code editor",
         readOnly,

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Menu, Search } from "lucide-react";
 import { RegionSelector } from "./region-selector";
 import { FlociStatusPill } from "./floci-status-pill";
+import { ThemeMenu } from "./theme-menu";
 
 export function TopBar({ onToggleSidebar, onOpenSearch, shortcut }: { onToggleSidebar: () => void; onOpenSearch: () => void; shortcut: string }) {
   return (
@@ -39,6 +40,7 @@ export function TopBar({ onToggleSidebar, onOpenSearch, shortcut }: { onToggleSi
       <div className="flex shrink-0 items-center gap-2 sm:gap-3">
         <FlociStatusPill />
         <RegionSelector />
+        <ThemeMenu />
       </div>
     </header>
   );

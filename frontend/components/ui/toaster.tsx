@@ -16,9 +16,9 @@ export function Toaster() {
           role={t.kind === "error" ? "alert" : "status"}
           className={cn(
             "pointer-events-auto flex items-start gap-2 rounded-lg border px-3 py-2 text-sm shadow-md",
-            t.kind === "success" && "border-aws-green bg-green-50",
-            t.kind === "error" && "border-aws-red bg-red-50",
-            t.kind === "info" && "border-aws-link bg-blue-50",
+            t.kind === "success" && "border-aws-green bg-aws-success-bg",
+            t.kind === "error" && "border-aws-red bg-aws-error-bg",
+            t.kind === "info" && "border-aws-link bg-aws-info-bg",
           )}
         >
           {t.kind === "success" && <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-aws-green" aria-hidden />}

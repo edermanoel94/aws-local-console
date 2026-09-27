@@ -4,6 +4,7 @@ AWS Local Console is a web application to explore and operate AWS services visua
 It uses [Floci](https://github.com/floci-io/floci) as the local AWS runtime, so everything runs on your machine without an AWS account.
 
 You can list, create, inspect, edit and delete resources, run arbitrary AWS operations, inspect requests and responses, browse logs and events, and explore relationships between resources.
+The console has a light and a dark theme, and by default follows the one of your operating system; pick one from the top bar or in Settings.
 
 ## Run the published images
 

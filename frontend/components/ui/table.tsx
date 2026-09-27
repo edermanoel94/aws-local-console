@@ -18,5 +18,5 @@ export function Td({ className, ...props }: TdHTMLAttributes<HTMLTableCellElemen
 }
 
 export function Tr({ className, selected, ...props }: HTMLAttributes<HTMLTableRowElement> & { selected?: boolean }) {
-  return <tr aria-selected={selected} className={cn("hover:bg-aws-panel", selected && "bg-blue-50", className)} {...props} />;
+  return <tr aria-selected={selected} className={cn("hover:bg-aws-panel", selected && "bg-aws-info-bg", className)} {...props} />;
 }

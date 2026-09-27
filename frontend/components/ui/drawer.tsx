@@ -44,7 +44,7 @@ export function Drawer({ open, onClose, title, subtitle, actions, children, widt
       aria-labelledby={titleId}
       tabIndex={-1}
       className={cn(
-        "fixed top-12 right-0 bottom-0 z-30 flex w-full flex-col border-l border-aws-border-strong bg-white shadow-2xl outline-none",
+        "fixed top-12 right-0 bottom-0 z-30 flex w-full flex-col border-l border-aws-border-strong bg-aws-surface shadow-2xl outline-none",
         "animate-[drawer-in_160ms_ease-out]",
         width === "md" && "max-w-md",
         width === "lg" && "max-w-2xl",

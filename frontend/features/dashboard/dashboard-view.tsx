@@ -84,14 +84,14 @@ export function DashboardView() {
 function StatCard({ label, value, hint, href, icon, loading }: { label: string; value?: number; hint?: string; href: string; icon: ReactNode; loading: boolean }) {
   const id = `stat-${label.toLowerCase()}`;
   return (
-    <section aria-labelledby={id} className="group relative rounded-2xl border border-aws-border bg-white px-5 py-4 shadow-sm transition-shadow hover:shadow-md">
+    <section aria-labelledby={id} className="group relative rounded-2xl border border-aws-border bg-aws-surface px-5 py-4 shadow-sm transition-shadow hover:shadow-md">
       <div className="flex items-start justify-between">
         <h2 id={id} className="text-sm font-bold text-aws-muted">
           <Link href={href} className="text-aws-muted no-underline after:absolute after:inset-0 group-hover:text-aws-link">
             {label}
           </Link>
         </h2>
-        <span className="flex size-9 items-center justify-center rounded-full bg-aws-panel text-aws-muted group-hover:bg-blue-50 group-hover:text-aws-link" aria-hidden>
+        <span className="flex size-9 items-center justify-center rounded-full bg-aws-panel text-aws-muted group-hover:bg-aws-info-bg group-hover:text-aws-link" aria-hidden>
           {icon}
         </span>
       </div>
@@ -210,7 +210,7 @@ function FlociStatusPanel() {
         ) : (
           <div className="flex flex-col gap-4">
             <div className="flex items-center gap-3">
-              <span className={`flex size-10 items-center justify-center rounded-full ${status.data.healthy ? "bg-green-50" : "bg-red-50"}`} aria-hidden>
+              <span className={`flex size-10 items-center justify-center rounded-full ${status.data.healthy ? "bg-aws-success-bg" : "bg-aws-error-bg"}`} aria-hidden>
                 <span className={`size-3 rounded-full ${status.data.healthy ? "bg-aws-green" : "bg-aws-red"}`} />
               </span>
               <div>

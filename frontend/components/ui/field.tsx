@@ -2,7 +2,7 @@ import { forwardRef, useId, type InputHTMLAttributes, type ReactNode, type Selec
 import { cn } from "@/lib/cn";
 
 const CONTROL =
-  "w-full rounded-lg border border-aws-border-strong bg-white px-2.5 py-1.5 text-sm text-aws-ink placeholder:text-aws-muted focus:border-aws-link focus:outline-none focus:ring-1 focus:ring-aws-link disabled:bg-aws-panel";
+  "w-full rounded-lg border border-aws-border-strong bg-aws-surface px-2.5 py-1.5 text-sm text-aws-ink placeholder:text-aws-muted focus:border-aws-link focus:outline-none focus:ring-1 focus:ring-aws-link disabled:bg-aws-panel";
 
 interface FieldShellProps {
   id: string;

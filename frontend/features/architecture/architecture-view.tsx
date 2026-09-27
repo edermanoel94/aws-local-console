@@ -4,6 +4,8 @@ import "@xyflow/react/dist/style.css";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Background, Controls, MarkerType, MiniMap, Panel as FlowPanel, ReactFlow, type Edge } from "@xyflow/react";
+import { useResolvedTheme } from "@/hooks/use-theme";
+import { CANVAS_COLORS } from "@/lib/theme";
 import { AlertTriangle, ArrowRight, Network, RefreshCw, X } from "lucide-react";
 import type { ArchitectureGraph } from "@/types/api";
 import { Button, EmptyState, ErrorAlert, Loading, Panel, SelectField, Table, Td, Th, Tr } from "@/components/ui";
@@ -24,6 +26,8 @@ export function ArchitectureView() {
   const [service, setService] = useState("");
   const [hideIsolated, setHideIsolated] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const theme = useResolvedTheme();
+  const canvas = CANVAS_COLORS[theme];
 
   const data = graph.data;
   const servicesInGraph = useMemo(() => [...new Set((data?.nodes ?? []).map((n) => n.service))].sort(), [data]);
@@ -54,7 +58,7 @@ export function ArchitectureView() {
     }));
     const flowEdges: Edge[] = edges.map((e) => {
       const source = nodes.find((n) => n.id === e.source);
-      const color = source ? serviceColor(source.service) : "#5f6b7a";
+      const color = source ? serviceColor(source.service) : canvas.muted;
       const highlighted = !!selectedId && (e.source === selectedId || e.target === selectedId);
       const target = nodes.find((n) => n.id === e.target);
       return {
@@ -67,8 +71,8 @@ export function ArchitectureView() {
         animated: highlighted,
         markerEnd: { type: MarkerType.ArrowClosed, color, width: 18, height: 18 },
         style: { stroke: color, strokeWidth: highlighted ? 2.5 : 1.5 },
-        labelStyle: { fontSize: 11, fontWeight: 700, fill: "#000716" },
-        labelBgStyle: { fill: "#ffffff", fillOpacity: 0.95 },
+        labelStyle: { fontSize: 11, fontWeight: 700, fill: canvas.ink },
+        labelBgStyle: { fill: canvas.surface, fillOpacity: 0.95 },
         labelBgPadding: [6, 3] as [number, number],
         labelBgBorderRadius: 6,
       };
@@ -76,7 +80,7 @@ export function ArchitectureView() {
     // Node positions/sizes live in React Flow (uncontrolled) so it can measure and drag them; remount when the node set changes.
     const signature = `${service}|${hideIsolated}|${nodes.map((n) => n.id).join(",")}`;
     return { nodes, edges, flowNodes, flowEdges, signature };
-  }, [data, service, hideIsolated, selectedId]);
+  }, [data, service, hideIsolated, selectedId, canvas]);
 
   const selected = data?.nodes.find((n) => n.id === selectedId);
   const nameOf = (id: string) => data?.nodes.find((n) => n.id === id);
@@ -109,7 +113,7 @@ export function ArchitectureView() {
       </Panel>
 
       {data?.errors && data.errors.length > 0 && (
-        <p className="flex items-start gap-2 rounded-xl border border-aws-orange bg-orange-50 px-4 py-2 text-sm">
+        <p className="flex items-start gap-2 rounded-xl border border-aws-orange bg-aws-warning-bg px-4 py-2 text-sm">
           <AlertTriangle className="mt-0.5 size-4 shrink-0 text-aws-orange-dark" aria-hidden />
           <span>
             Some relationships could not be collected:{" "}
@@ -138,9 +142,10 @@ export function ArchitectureView() {
         </Panel>
       ) : (
         <>
-          <section aria-label="Architecture graph" className="relative h-[calc(100vh-17rem)] min-h-[520px] overflow-hidden rounded-2xl border border-aws-border bg-white shadow-sm">
+          <section aria-label="Architecture graph" className="relative h-[calc(100vh-17rem)] min-h-[520px] overflow-hidden rounded-2xl border border-aws-border bg-aws-surface shadow-sm">
             <ReactFlow
               key={view.signature}
+              colorMode={theme}
               defaultNodes={view.flowNodes}
               edges={view.flowEdges}
               nodeTypes={nodeTypes}
@@ -152,7 +157,7 @@ export function ArchitectureView() {
               onNodeClick={(_, node) => setSelectedId(node.id)}
               onPaneClick={() => setSelectedId(null)}
             >
-              <Background gap={20} size={1.2} color="#d5dbdb" />
+              <Background gap={20} size={1.2} color={canvas.grid} />
               <Controls showInteractive={false} position="bottom-left" />
               <MiniMap pannable zoomable nodeColor={(n) => serviceColor((n.data as { service: string }).service)} nodeStrokeWidth={0} position="bottom-right" className="rounded-lg! border! border-aws-border!" />
               {selected && (
@@ -217,7 +222,7 @@ function NodeDetails({ node, graph, onClose }: { node: GraphNode; graph?: Archit
   const outgoing = graph?.edges.filter((e) => e.source === node.id) ?? [];
   const byId = (id: string) => graph?.nodes.find((n) => n.id === id)?.name ?? id;
   return (
-    <div className="w-80 rounded-xl border border-aws-border-strong bg-white p-4 text-sm shadow-lg">
+    <div className="w-80 rounded-xl border border-aws-border-strong bg-aws-surface p-4 text-sm shadow-lg">
       <div className="flex items-start gap-3">
         <ServiceIcon service={node.service} />
         <div className="min-w-0 flex-1">

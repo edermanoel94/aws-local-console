@@ -81,7 +81,7 @@ export function EventsExplorer() {
                   setParam("q", e.target.value);
                 }}
                 placeholder="Resource name or ARN"
-                className="h-[34px] w-full rounded-lg border border-aws-border-strong bg-white pr-3 pl-8 text-sm placeholder:text-aws-muted focus:border-aws-link focus:ring-1 focus:ring-aws-link focus:outline-none"
+                className="h-[34px] w-full rounded-lg border border-aws-border-strong bg-aws-surface pr-3 pl-8 text-sm placeholder:text-aws-muted focus:border-aws-link focus:ring-1 focus:ring-aws-link focus:outline-none"
               />
             </div>
           </div>

@@ -21,14 +21,14 @@ export const ResourceNode = memo(function ResourceNode({ data, selected }: NodeP
   return (
     <div
       className={cn(
-        "flex h-[68px] w-[232px] items-center gap-3 rounded-xl border bg-white px-3 shadow-sm transition-[opacity,box-shadow]",
+        "flex h-[68px] w-[232px] items-center gap-3 rounded-xl border bg-aws-surface px-3 shadow-sm transition-[opacity,box-shadow]",
         selected ? "border-aws-link ring-2 ring-aws-link/30" : "border-aws-border-strong hover:shadow-md",
         data.dimmed && "opacity-40",
       )}
       style={{ borderLeftWidth: 4, borderLeftColor: serviceColor(data.service) }}
       title={data.arn}
     >
-      <Handle type="target" position={Position.Left} className="size-2! border-white! bg-aws-border-strong!" />
+      <Handle type="target" position={Position.Left} className="size-2! border-aws-surface! bg-aws-border-strong!" />
       <ServiceIcon service={data.service} size="md" />
       <div className="min-w-0 flex-1">
         <p className="truncate text-[11px] leading-4 text-aws-muted">
@@ -38,7 +38,7 @@ export const ResourceNode = memo(function ResourceNode({ data, selected }: NodeP
         </p>
         <p className="truncate text-sm leading-5 font-bold text-aws-ink">{data.name}</p>
       </div>
-      <Handle type="source" position={Position.Right} className="size-2! border-white! bg-aws-border-strong!" />
+      <Handle type="source" position={Position.Right} className="size-2! border-aws-surface! bg-aws-border-strong!" />
     </div>
   );
 });

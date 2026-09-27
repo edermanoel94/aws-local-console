@@ -84,7 +84,7 @@ export function JsonEditor({ label, value, onChange, height = 280, readOnly, des
 
       <div
         className={cn(
-          "relative overflow-hidden rounded-lg border bg-white",
+          "relative overflow-hidden rounded-lg border bg-aws-surface",
           validation.error ? "border-aws-red" : "border-aws-border-strong",
           "focus-within:border-aws-link focus-within:ring-1 focus-within:ring-aws-link",
         )}
@@ -104,7 +104,7 @@ export function JsonEditor({ label, value, onChange, height = 280, readOnly, des
           tabIndex={showTextarea ? 0 : -1}
           className={cn(
             showTextarea
-              ? "absolute inset-0 size-full resize-none bg-white px-3 py-2 font-mono text-[13px] leading-5 text-aws-ink focus:outline-none"
+              ? "absolute inset-0 size-full resize-none bg-aws-surface px-3 py-2 font-mono text-[13px] leading-5 text-aws-ink focus:outline-none"
               : "visually-hidden",
           )}
         />

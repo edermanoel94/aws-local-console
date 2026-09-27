@@ -254,7 +254,7 @@ function MessageDetails({ message }: { message: SqsMessage }) {
     <div className="grid gap-4 lg:grid-cols-2">
       <div className="min-w-0">
         <p className="mb-1 text-sm font-bold">Body</p>
-        <pre aria-label="Message body content" className="max-h-80 overflow-auto rounded-lg border border-aws-border bg-white p-3 font-mono text-xs whitespace-pre-wrap">
+        <pre aria-label="Message body content" className="max-h-80 overflow-auto rounded-lg border border-aws-border bg-aws-surface p-3 font-mono text-xs whitespace-pre-wrap">
           {prettyJson(message.Body)}
         </pre>
       </div>

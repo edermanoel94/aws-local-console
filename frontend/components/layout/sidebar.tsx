@@ -33,7 +33,7 @@ export function Sidebar({ mode }: { mode: SidebarMode }) {
   return (
     <aside
       className={cn(
-        "sticky top-12 flex h-[calc(100vh-3rem)] shrink-0 flex-col overflow-y-auto border-r border-aws-border bg-white transition-[width] duration-150",
+        "sticky top-12 flex h-[calc(100vh-3rem)] shrink-0 flex-col overflow-y-auto border-r border-aws-border bg-aws-surface transition-[width] duration-150",
         classes.aside,
       )}
     >
@@ -50,7 +50,7 @@ export function Sidebar({ mode }: { mode: SidebarMode }) {
                   title={mode === "expanded" ? undefined : item.label}
                   className={cn(
                     "relative flex h-9 items-center gap-3 rounded-lg px-3 text-sm no-underline transition-colors",
-                    active ? "bg-blue-50 font-bold text-aws-link" : "text-aws-ink hover:bg-aws-panel",
+                    active ? "bg-aws-info-bg font-bold text-aws-link" : "text-aws-ink hover:bg-aws-panel",
                     classes.link,
                   )}
                 >
@@ -82,7 +82,7 @@ export function Sidebar({ mode }: { mode: SidebarMode }) {
                       href={href}
                       className={cn(
                         "flex h-8 items-center gap-2.5 rounded-lg px-3 text-sm no-underline",
-                        active ? "bg-blue-50 font-bold text-aws-link" : "text-aws-ink hover:bg-aws-panel",
+                        active ? "bg-aws-info-bg font-bold text-aws-link" : "text-aws-ink hover:bg-aws-panel",
                       )}
                     >
                       <ServiceIcon service={id} category={service?.category} size="sm" />

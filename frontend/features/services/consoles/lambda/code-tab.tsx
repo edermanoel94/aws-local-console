@@ -42,7 +42,7 @@ export function CodeTab({ fn }: { fn: FunctionConfiguration }) {
     >
       <div className="flex flex-col gap-3">
         {!known && (
-          <p className="flex items-start gap-2 rounded-lg border border-aws-link bg-blue-50 px-3 py-2 text-sm">
+          <p className="flex items-start gap-2 rounded-lg border border-aws-link bg-aws-info-bg px-3 py-2 text-sm">
             <Info className="mt-0.5 size-4 shrink-0 text-aws-link" aria-hidden />
             <span>
               The deployed package was not created from this browser, so its source can&apos;t be displayed. The editor starts from the {runtime} template; choose Deploy to

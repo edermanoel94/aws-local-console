@@ -37,7 +37,7 @@ export function CliConsole() {
             key={cmd}
             type="button"
             onClick={() => handle.current?.setLine(cmd)}
-            className="h-7 rounded-full border border-aws-border-strong bg-white px-3 font-mono text-[12px] text-aws-ink hover:border-aws-link hover:text-aws-link"
+            className="h-7 rounded-full border border-aws-border-strong bg-aws-surface px-3 font-mono text-[12px] text-aws-ink hover:border-aws-link hover:text-aws-link"
           >
             {cmd}
           </button>

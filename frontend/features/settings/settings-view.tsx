@@ -10,6 +10,8 @@ import { useRegion } from "@/hooks/use-region";
 import { useHydrated } from "@/hooks/use-hydrated";
 import { usePreferences } from "@/stores/preferences";
 import { toast } from "@/stores/toast";
+import { THEME_OPTIONS } from "@/lib/theme";
+import { RadioCards } from "@/features/services/consoles/_shared/controls";
 
 export function SettingsView() {
   const floci = useFlociStatus();
@@ -20,6 +22,9 @@ export function SettingsView() {
   const favorites = usePreferences((s) => s.favorites);
   const clearFavorites = usePreferences((s) => s.clearFavorites);
   const favoriteCount = hydrated ? favorites.length : 0;
+  const storedTheme = usePreferences((s) => s.theme);
+  const setTheme = usePreferences((s) => s.setTheme);
+  const theme = hydrated ? storedTheme : "system";
 
   const regionValue = useRegion();
   const regionOptions = (regions.data ?? [{ name: regionValue, label: regionValue, default: true }]).map((r) => ({
@@ -83,6 +88,17 @@ export function SettingsView() {
 
           <Panel title="Preferences" description="Stored in this browser.">
             <div className="flex flex-col gap-5">
+              <RadioCards
+                legend="Theme"
+                name="theme"
+                columns={3}
+                value={theme}
+                onChange={(next) => {
+                  setTheme(next);
+                  toast.success(`Theme set to ${THEME_OPTIONS.find((o) => o.value === next)?.label.toLowerCase()}`);
+                }}
+                options={THEME_OPTIONS}
+              />
               <SelectField
                 label="Default region"
                 description="Used by every console, the API Explorer and the CLI. Same as the top bar selector."

@@ -55,7 +55,7 @@ export function RulesTable({ bus, fixedBus }: { bus: string; fixedBus?: boolean 
             <select
               value={bus}
               onChange={(e) => navigate({ prefix: e.target.value === DEFAULT_BUS ? null : e.target.value })}
-              className="w-56 rounded-lg border border-aws-border-strong bg-white px-2.5 py-1.5 text-sm font-normal text-aws-ink focus:border-aws-link focus:ring-1 focus:ring-aws-link focus:outline-none"
+              className="w-56 rounded-lg border border-aws-border-strong bg-aws-surface px-2.5 py-1.5 text-sm font-normal text-aws-ink focus:border-aws-link focus:ring-1 focus:ring-aws-link focus:outline-none"
             >
               {busOptions.map((b) => (
                 <option key={b.value} value={b.value}>

@@ -20,7 +20,7 @@ export function Panel({
   bodyClassName?: string;
 }) {
   return (
-    <section className={cn("rounded-2xl border border-aws-border bg-white shadow-sm", className)}>
+    <section className={cn("rounded-2xl border border-aws-border bg-aws-surface shadow-sm", className)}>
       {(title || actions) && (
         <header className="flex flex-wrap items-center justify-between gap-3 border-b border-aws-border px-5 py-3">
           <div className="min-w-0">

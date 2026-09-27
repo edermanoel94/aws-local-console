@@ -49,7 +49,7 @@ export function ServiceCatalog() {
         breadcrumbs={[{ label: "AWS Local Console", href: "/dashboard" }, { label: "Services" }]}
       />
 
-      <div className="mb-5 flex flex-wrap items-end gap-4 rounded-2xl border border-aws-border bg-white px-5 py-4 shadow-sm">
+      <div className="mb-5 flex flex-wrap items-end gap-4 rounded-2xl border border-aws-border bg-aws-surface px-5 py-4 shadow-sm">
         <div className="flex min-w-64 flex-1 flex-col gap-1">
           <label htmlFor="service-search" className="text-sm font-bold">
             Search
@@ -62,7 +62,7 @@ export function ServiceCatalog() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Find services by name, id or category"
-              className="h-9 w-full rounded-lg border border-aws-border-strong bg-white pr-3 pl-8 text-sm placeholder:text-aws-muted focus:border-aws-link focus:ring-1 focus:ring-aws-link focus:outline-none"
+              className="h-9 w-full rounded-lg border border-aws-border-strong bg-aws-surface pr-3 pl-8 text-sm placeholder:text-aws-muted focus:border-aws-link focus:ring-1 focus:ring-aws-link focus:outline-none"
             />
           </div>
         </div>
@@ -82,7 +82,7 @@ export function ServiceCatalog() {
       ) : services.isError ? (
         <ErrorAlert error={services.error} />
       ) : filtered.length === 0 ? (
-        <div className="rounded-2xl border border-aws-border bg-white">
+        <div className="rounded-2xl border border-aws-border bg-aws-surface">
           <EmptyState title="No services match" description={`Nothing matches "${query}". Try a different name or clear the filters.`} />
         </div>
       ) : (
@@ -102,7 +102,7 @@ function CategorySection({ category, services }: { category: ServiceCategory; se
   const id = `category-${category.toLowerCase().replace(/\s+/g, "-")}`;
   const Icon = CATEGORY_ICONS[category];
   return (
-    <section aria-labelledby={id} className="flex flex-col rounded-2xl border border-aws-border bg-white shadow-sm">
+    <section aria-labelledby={id} className="flex flex-col rounded-2xl border border-aws-border bg-aws-surface shadow-sm">
       <h2 id={id} className="flex items-center gap-2 border-b border-aws-border px-5 py-3 text-base font-bold text-aws-ink">
         <span className="flex size-6 items-center justify-center rounded-md" style={{ background: `${CATEGORY_COLORS[category]}1a` }} aria-hidden>
           <Icon className="size-3.5" style={{ color: CATEGORY_COLORS[category] }} />

@@ -191,7 +191,7 @@ function Palette({ onClose }: { onClose: () => void }) {
         role="dialog"
         aria-modal="true"
         aria-label="Command palette"
-        className="flex max-h-[70vh] w-full max-w-2xl animate-[palette-in_120ms_ease-out] flex-col overflow-hidden rounded-xl border border-aws-border-strong bg-white shadow-2xl"
+        className="flex max-h-[70vh] w-full max-w-2xl animate-[palette-in_120ms_ease-out] flex-col overflow-hidden rounded-xl border border-aws-border-strong bg-aws-surface shadow-2xl"
         onKeyDown={onKeyDown}
       >
         <div className="flex items-center gap-2 border-b border-aws-border px-4">
@@ -246,7 +246,7 @@ function Palette({ onClose }: { onClose: () => void }) {
                         aria-selected={selected}
                         onMouseMove={() => setActive(items.indexOf(item))}
                         onClick={() => go(item)}
-                        className={cn("mx-2 flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2", selected ? "bg-blue-50" : "hover:bg-aws-panel")}
+                        className={cn("mx-2 flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2", selected ? "bg-aws-info-bg" : "hover:bg-aws-panel")}
                       >
                         <span className="flex size-5 shrink-0 items-center justify-center">{item.icon}</span>
                         <span className="min-w-0 flex-1">

@@ -45,7 +45,7 @@ export function RadioCards<T extends string>({
             key={o.value}
             className={cn(
               "flex cursor-pointer items-start gap-2 rounded-lg border px-3 py-2 text-sm",
-              value === o.value ? "border-aws-link bg-blue-50" : "border-aws-border-strong bg-white hover:bg-aws-panel",
+              value === o.value ? "border-aws-link bg-aws-info-bg" : "border-aws-border-strong bg-aws-surface hover:bg-aws-panel",
             )}
           >
             <input type="radio" name={name} value={o.value} checked={value === o.value} onChange={() => onChange(o.value)} className="mt-0.5 accent-aws-link" />
@@ -173,7 +173,7 @@ export function KeyValueEditor({
 }) {
   const update = (index: number, patch: Partial<KeyValue>) => onChange(rows.map((r, i) => (i === index ? { ...r, ...patch } : r)));
   const input =
-    "w-full rounded-lg border border-aws-border-strong bg-white px-2.5 py-1.5 text-sm text-aws-ink placeholder:text-aws-muted focus:border-aws-link focus:outline-none focus:ring-1 focus:ring-aws-link";
+    "w-full rounded-lg border border-aws-border-strong bg-aws-surface px-2.5 py-1.5 text-sm text-aws-ink placeholder:text-aws-muted focus:border-aws-link focus:outline-none focus:ring-1 focus:ring-aws-link";
   return (
     <div className="flex flex-col gap-2">
       {rows.length === 0 ? (
@@ -323,7 +323,7 @@ export function ConfirmDialog({
 /** Small inline remove icon button for table rows. */
 export function RemoveIconButton({ label, onClick }: { label: string; onClick: () => void }) {
   return (
-    <button type="button" aria-label={label} title={label} onClick={onClick} className="inline-flex size-7 items-center justify-center rounded text-aws-muted hover:bg-red-50 hover:text-aws-red">
+    <button type="button" aria-label={label} title={label} onClick={onClick} className="inline-flex size-7 items-center justify-center rounded text-aws-muted hover:bg-aws-error-bg hover:text-aws-red">
       <X className="size-4" aria-hidden />
     </button>
   );
@@ -355,7 +355,7 @@ export function SegmentedControl<T extends string>({
             className={cn(
               "relative cursor-pointer px-4 py-1 text-sm font-bold focus-within:outline-2 focus-within:outline-offset-[-2px] focus-within:outline-aws-link",
               i > 0 && "border-l border-aws-border-strong",
-              value === o.value ? "bg-aws-navy text-white" : "bg-white text-aws-ink hover:bg-aws-panel",
+              value === o.value ? "bg-aws-navy text-white" : "bg-aws-surface text-aws-ink hover:bg-aws-panel",
             )}
           >
             {/* Transparent radio covering the whole segment: clicks land on the real input (keyboard and pointer), no visual radio. */}

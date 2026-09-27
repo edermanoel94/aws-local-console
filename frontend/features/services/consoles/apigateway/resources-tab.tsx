@@ -82,7 +82,7 @@ export function ResourcesTab({ apiId }: { apiId: string }) {
                     type="button"
                     aria-current={active || undefined}
                     onClick={() => navigate({ resource: apiId, detail: "resources", item: r.Id })}
-                    className={cn("flex w-full rounded-lg px-3 py-1.5 text-left", active ? "bg-blue-50 ring-1 ring-aws-link" : "hover:bg-aws-panel")}
+                    className={cn("flex w-full rounded-lg px-3 py-1.5 text-left", active ? "bg-aws-info-bg ring-1 ring-aws-link" : "hover:bg-aws-panel")}
                     style={{ paddingLeft: `${12 + depth * 14}px` }}
                   >
                     <span className="font-mono text-sm font-bold break-all text-aws-ink">{r.Path === "/" ? "/" : `/${r.PathPart ?? r.Path.split("/").pop()}`}</span>
@@ -169,7 +169,7 @@ function ResourceDetail({ apiId, resource, onCreateMethod }: { apiId: string; re
                   role="tab"
                   aria-selected={m === current}
                   onClick={() => setMethod(m)}
-                  className={cn("rounded-full border px-3 py-1 font-mono text-xs font-bold", m === current ? "border-aws-link bg-blue-50 text-aws-link" : "border-aws-border-strong bg-white hover:bg-aws-panel")}
+                  className={cn("rounded-full border px-3 py-1 font-mono text-xs font-bold", m === current ? "border-aws-link bg-aws-info-bg text-aws-link" : "border-aws-border-strong bg-aws-surface hover:bg-aws-panel")}
                 >
                   {m}
                 </button>

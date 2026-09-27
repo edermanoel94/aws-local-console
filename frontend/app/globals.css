@@ -1,6 +1,13 @@
 @import "tailwindcss";
 
-/* AWS Management Console inspired palette. Use these tokens (bg-aws-*, text-aws-*, border-aws-*) instead of raw colors. */
+/* `dark:` utilities follow the resolved theme (class on <html>, set by lib/theme.ts), not only the OS setting. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * AWS Management Console inspired palette. Use these tokens (bg-aws-*, text-aws-*, border-aws-*) instead of raw colors:
+ * they switch between the light and dark themes (dark values below), raw colors don't.
+ * The navy and squid tones are the chrome (top bar, terminals, code editors) and stay dark in both themes.
+ */
 @theme {
   --color-aws-navy: #232f3e;
   --color-aws-navy-light: #2f3d4f;
@@ -16,9 +23,42 @@
   --color-aws-page: #f2f3f3;
   --color-aws-green: #037f0c;
   --color-aws-red: #d91515;
+  /* Containers (panels, dialogs, inputs, table rows) on top of the page background. */
+  --color-aws-surface: #ffffff;
+  /* Tinted backgrounds of selected items and of info, error, success and warning states. */
+  --color-aws-info-bg: #eff6ff;
+  --color-aws-error-bg: #fef2f2;
+  --color-aws-success-bg: #f0fdf4;
+  --color-aws-warning-bg: #fff7ed;
+  /* Text on the orange accent (primary buttons): dark in both themes. */
+  --color-aws-on-accent: #000716;
 
   --font-sans: var(--font-open-sans), "Helvetica Neue", Roboto, Arial, sans-serif;
   --font-mono: var(--font-jetbrains-mono), ui-monospace, Menlo, monospace;
+}
+
+/* Dark theme (Cloudscape dark mode inspired): same tokens, dark values. */
+:root.dark {
+  color-scheme: dark;
+  --color-aws-orange-dark: #ffac31;
+  --color-aws-link: #42b4ff;
+  --color-aws-ink: #e9ebed;
+  --color-aws-muted: #9ba7b6;
+  --color-aws-border: #2c3744;
+  --color-aws-border-strong: #56637a;
+  --color-aws-panel: #1b232d;
+  --color-aws-page: #0f141a;
+  --color-aws-green: #3ec94a;
+  --color-aws-red: #ff6b70;
+  --color-aws-surface: #161d26;
+  --color-aws-info-bg: #0f2a45;
+  --color-aws-error-bg: #3a1519;
+  --color-aws-success-bg: #11301b;
+  --color-aws-warning-bg: #3a270b;
+}
+
+:root {
+  color-scheme: light;
 }
 
 /* Base styles live in the base layer so Tailwind utilities (e.g. text-*, no-underline on links) can override them. */
@@ -70,6 +110,17 @@
   clip-path: inset(50%);
   white-space: nowrap;
   border: 0;
+}
+
+/* React Flow in dark mode: blend its pane, minimap and controls into the console surfaces. */
+/* Scoped under :root.dark to win over @xyflow/react/dist/style.css, which is loaded after this file. */
+:root.dark .react-flow.dark {
+  --xy-background-color-default: var(--color-aws-surface);
+  --xy-minimap-background-color-default: var(--color-aws-panel);
+  --xy-controls-button-background-color-default: var(--color-aws-panel);
+  --xy-controls-button-background-color-hover-default: var(--color-aws-border);
+  --xy-controls-button-border-color-default: var(--color-aws-border);
+  --xy-controls-button-color-default: var(--color-aws-ink);
 }
 
 /* React Flow attribution (kept visible per its MIT license terms), toned down to match the console */
