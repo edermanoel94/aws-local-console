@@ -4,7 +4,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button, ErrorAlert, Panel, TextField } from "@/components/ui";
-import { useConsoleAction } from "../_shared/aws";
+import { useConsoleAction, usePlaceholderAccountId } from "../_shared/aws";
+import { useRegion } from "@/hooks/use-region";
 import { Checkbox, SuggestField } from "../_shared/controls";
 import { useQueueOptions } from "../_shared/pickers";
 import { optionalInt, requiredInt } from "../_shared/validation";
@@ -39,6 +40,8 @@ export function EditQueueAttributes({ queueName, queue }: { queueName: string; q
   const a = queue.attributes;
   const fifo = isFifo(queueName);
   const queues = useQueueOptions();
+  const region = useRegion();
+  const placeholderAccount = usePlaceholderAccountId();
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
@@ -94,7 +97,7 @@ export function EditQueueAttributes({ queueName, queue }: { queueName: string; q
         <div className="grid gap-4 md:grid-cols-2">
           <SuggestField
             label="Dead-letter queue ARN"
-            placeholder="arn:aws:sqs:us-east-1:000000000000:my-dlq"
+            placeholder={`arn:aws:sqs:${region}:${placeholderAccount}:my-dlq`}
             suggestions={(queues.data ?? []).filter((q) => q.label !== queueName)}
             {...form.register("deadLetterTargetArn")}
           />

@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/edermanoel94/aws-local-console/backend/internal/coverage"
+	"github.com/edermanoel94/aws-local-console/backend/internal/environments"
 	"github.com/edermanoel94/aws-local-console/backend/internal/operations"
 	"github.com/edermanoel94/aws-local-console/backend/internal/services"
 )
@@ -57,8 +58,24 @@ func (s *Server) operationInfo(op *operations.Operation) operationInfo {
 		Service:      op.Service,
 		Mutating:     op.Mutating,
 		Coverage:     s.Coverage.Status(op.Service, op.Name),
-		InputExample: op.Example(),
+		InputExample: op.Example(s.exampleTarget()),
 		InputFields:  op.InputFields(),
+	}
+}
+
+// exampleTarget is the account and region the operation examples are written for.
+func (s *Server) exampleTarget() operations.ExampleTarget {
+	if s.Config.Target == environments.TargetFloci {
+		return operations.FlociExamples
+	}
+	account := s.Monitor.AccountID()
+	if account == "" {
+		account = "123456789012" // placeholder until the credentials work
+	}
+	return operations.ExampleTarget{
+		AccountID:    account,
+		Region:       s.Config.DefaultRegion,
+		QueueURLBase: "https://sqs." + s.Config.DefaultRegion + ".amazonaws.com",
 	}
 }
 
@@ -79,10 +96,10 @@ func (s *Server) lookupService(w http.ResponseWriter, r *http.Request) (*service
 }
 
 func (s *Server) listServices(w http.ResponseWriter, r *http.Request) {
-	health := s.Floci.Cached(r.Context())
+	status := s.Monitor.Cached(r.Context())
 	summaries := []serviceSummary{}
 	for _, def := range s.Registry.All() {
-		summaries = append(summaries, s.summary(def, health.Running(def.FlociID)))
+		summaries = append(summaries, s.summary(def, status.Available(def.FlociID)))
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"services": summaries})
 }
@@ -92,9 +109,9 @@ func (s *Server) getService(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	health := s.Floci.Cached(r.Context())
+	status := s.Monitor.Cached(r.Context())
 	writeJSON(w, http.StatusOK, serviceDetail{
-		serviceSummary: s.summary(def, health.Running(def.FlociID)),
+		serviceSummary: s.summary(def, status.Available(def.FlociID)),
 		Operations:     s.operationInfos(def.ID),
 	})
 }

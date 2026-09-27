@@ -17,6 +17,7 @@ The Go API and Next.js ship as one image (root `Dockerfile`); `docker/entrypoint
 Backend environment variables:
 
 ```env
+CONSOLE_TARGET=floci            # floci (default) or aws
 FLOCI_ENDPOINT=http://localhost:4566
 AWS_REGION=us-east-1
 AWS_ACCESS_KEY_ID=test
@@ -33,6 +34,17 @@ When the Go API cannot be reached, the proxy answers 502 with the error envelope
 
 Floci account id is `000000000000`.
 The Floci container resolves itself as `localhost.floci.io`; S3 must use path-style addressing.
+
+### 1.1 Targets
+
+The Go API operates exactly one target, chosen at startup with `CONSOLE_TARGET`:
+
+- `floci` (default): every client uses `FLOCI_ENDPOINT` with static credentials (`AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY`, default `test`/`test`), `AWS_REGION` (default `us-east-1`), path-style S3 and no SDK retries.
+- `aws`: a single real AWS account, the one of the credentials the Go API process has.
+  The configuration is the AWS SDK default one: credentials from the default chain (environment variables including `AWS_SESSION_TOKEN`, `AWS_PROFILE` and the shared config/credentials files with assume role, `credential_process` and SSO, web identity, container and instance roles), the region from `AWS_REGION`, `AWS_DEFAULT_REGION` or the profile (startup fails without one), AWS endpoints, virtual-hosted S3 and the SDK standard retryer (the captured exchange is the last attempt).
+  `FLOCI_ENDPOINT` is ignored.
+  The account id comes from `sts:GetCallerIdentity` (at startup and on every health check); until the credentials work it is empty and ARNs built by the console cannot be complete.
+  Floci-only behavior is off: no `unsupported` error kind, no coverage in the UI, no `/_floci/health` (a service is `available` when the credentials work).
 
 ## 2. General API rules
 
@@ -60,7 +72,7 @@ interface ServiceSummary {
   shortName: string;          // "S3"
   description: string;
   category: ServiceCategory;
-  available: boolean;         // Floci reports the service as running
+  available: boolean;         // Floci reports the service as running; on AWS, the credentials work
   resourceTypes: string[];    // ["bucket"]
   operationCount: number;
   coverage: { supported: number; unsupported: number; untested: number };
@@ -90,10 +102,10 @@ interface OperationInfo {
 type ExecutionStatus = "success" | "error";
 type ErrorKind =
   | "aws"           // AWS/Floci returned a service error (e.g. BucketAlreadyOwnedByYou)
-  | "unsupported"   // Floci does not implement the operation
-  | "validation"    // input invalid before calling Floci (bad JSON shape, unknown operation)
-  | "network"       // Floci unreachable / timeout
-  | "application";  // unexpected internal error in the Go API
+  | "unsupported"   // Floci does not implement the operation (never on the aws target)
+  | "validation"    // input invalid before calling the target (bad JSON shape, unknown operation)
+  | "network"       // target unreachable / timeout
+  | "application";  // unexpected internal error in the Go API, or credentials that cannot be loaded (code CredentialsError)
 
 interface ExecuteRequest {
   service: string;            // "s3"
@@ -244,7 +256,23 @@ interface ArchitectureGraph {
 // Without `region` the default region is used. IAM roles are not graph nodes.
 
 // GET /api/v1/health -> { status: "ok", version: string }
-// GET /api/v1/floci/status -> { endpoint: string; healthy: boolean; status: "Healthy" | "Unreachable"; version?: string; edition?: string; services: { id: string; status: string }[]; latencyMs: number; error?: string }
+// GET /api/v1/target -> TargetStatus (checks the target now; the UI polls it every 10s)
+interface TargetStatus {
+  target: "floci" | "aws";
+  name: "Floci" | "AWS";
+  endpoint?: string;          // FLOCI_ENDPOINT (floci only)
+  region: string;             // default region of the Go API
+  accountId: string;          // floci: 000000000000; aws: account of the credentials, "" until they work
+  identityArn?: string;       // aws only, from sts:GetCallerIdentity
+  credentialSource?: string;  // aws only, SDK provider name (e.g. "EnvConfigCredentials", "SSOProvider")
+  healthy: boolean;
+  status: "Healthy" | "Unreachable" | "Unauthorized";   // Unauthorized: aws credentials missing, invalid or expired
+  version?: string;           // floci only
+  edition?: string;           // floci only
+  services: { id: string; status: string }[];           // floci only (from /_floci/health), [] on aws
+  latencyMs: number;
+  error?: string;
+}
 
 // GET /api/v1/dashboard -> DashboardSummary
 interface DashboardSummary {
@@ -282,7 +310,7 @@ Required subset:
 
 ### 3.3 API Gateway stage invoke
 
-Floci does not implement `TestInvokeMethod` (HTTP 406), so deployed REST APIs are executed through a proxy:
+Floci does not implement `TestInvokeMethod` (HTTP 406), so deployed REST APIs are executed through a proxy (on both targets, which also calls the real stage on AWS):
 
 ```ts
 // POST /api/v1/apigateway/invoke   (honors X-Console-Source)
@@ -290,7 +318,8 @@ interface ApiInvokeRequest { restApiId: string; stage: string; method?: string /
 interface ApiInvokeResponse { status: number; headers: Record<string, string>; body: string; durationMs: number; url: string; logId: string }
 ```
 
-It forwards to `{FLOCI_ENDPOINT}/restapis/{restApiId}/{stage}/_user_request_{path}` and always answers HTTP 200 with the upstream status inside (502 envelope `FlociUnreachable` only when Floci cannot be reached).
+It forwards to `{FLOCI_ENDPOINT}/restapis/{restApiId}/{stage}/_user_request_{path}` on Floci and to `https://{restApiId}.execute-api.{region}.amazonaws.com/{stage}{path}` on AWS, and always answers HTTP 200 with the upstream status inside (502 envelope `TargetUnreachable` only when the stage cannot be reached).
+The same base URL is the `invokeUrl` of each stage in the `apigateway` resource attributes.
 It is audited as a LogEntry with `service: "apigateway"`, `operation: "Invoke"`, `resourceName` = restApiId (status `error` with `errorKind: "aws"` when the upstream status is >= 400) and a successful call emits a ResourceEvent of type `ApiInvoked`.
 Calling an undefined method/path returns 403 `{"message":"Missing Authentication Token"}`, like AWS.
 
@@ -314,6 +343,8 @@ Operations are discovered by reflection on the SDK v2 client type (every exporte
 Coverage per operation: `supported` once it has succeeded (or failed with a regular AWS error) against Floci, `unsupported` once Floci answered it as not implemented, `untested` otherwise.
 Coverage is kept in memory in the backend.
 Only `aws` and `unsupported` error kinds (and successes) change coverage; `validation`, `network` and `application` errors say nothing about Floci.
+Coverage describes Floci: the UI hides it on the `aws` target, where every SDK operation exists.
+Operation `inputExample` values are written for Floci (account `000000000000`, `us-east-1`, `http://localhost:4566` queue URLs); on the `aws` target the backend rewrites the account, region and queue URLs in them to the real ones.
 
 `mutating` is false for operation names starting with List, Get, Describe, Head, Receive, Scan, Query, BatchGet, Search, Lookup, Select, Filter, Test, Validate, Estimate, Check, Detect, Preview.
 ResourceEvent types emitted: `ResourceCreated`, `ResourceDeleted`, `ResourceUpdated` (generic by Create*/Delete*/other), `ObjectUploaded`, `ObjectDeleted`, `MessageSent`, `MessageDeleted`, `QueuePurged`, `MessagePublished`, `SubscriptionCreated`, `SubscriptionDeleted`, `ItemWritten`, `ItemDeleted`, `FunctionInvoked`, `TargetsAdded`, `TargetsRemoved`, `EventPublished`, `ApiDeployed`, `ApiInvoked`, `LogEventsWritten`.
@@ -340,9 +371,9 @@ ResourceEvent types emitted: `ResourceCreated`, `ResourceDeleted`, `ResourceUpda
 | Route | Content |
 |---|---|
 | `/` | redirects to `/dashboard` |
-| `/dashboard` | cards: Services, Resources, Regions; Recent Operations; Floci Status; Favorites |
+| `/dashboard` | cards: Services, Resources, Regions; Recent Operations; Floci Status (AWS Status on the aws target); Favorites |
 | `/services` | services grouped by category, search box |
-| `/services/[service]` | tabs: Overview, Resources, Operations, API Explorer, Activity, Coverage. `?tab=` query selects tab. Resources tab hosts the service console when available |
+| `/services/[service]` | tabs: Overview, Resources, Operations, API Explorer, Activity, Coverage (Floci only). `?tab=` query selects tab. Resources tab hosts the service console when available |
 | `/resources` | Resource Explorer: search, filters (service, region, tag), table with name/type/service/region/ARN |
 | `/api-explorer` | service, operation, region selectors; Monaco JSON input; Execute; result with Status, Duration, Request, Response, Headers, Request ID. Supports `?service=&operation=` |
 | `/architecture` | React Flow graph from `/api/v1/architecture` |
@@ -352,7 +383,7 @@ ResourceEvent types emitted: `ResourceCreated`, `ResourceDeleted`, `ResourceUpda
 | `/cli` | xterm.js terminal backed by `/api/v1/cli/execute` |
 | `/settings` | endpoint info (read only), default region, clear favorites |
 
-Global layout: top bar (Global Search button showing `Ctrl K`, region selector, Floci status pill `Floci ●`), left sidebar (Dashboard, Services, Resources, API Explorer, Architecture, Events, Logs, CLI, Settings).
+Global layout: top bar (Global Search button showing `Ctrl K`, region selector, target status pill `Floci ●` or `AWS ●`), left sidebar (Dashboard, Services, Resources, API Explorer, Architecture, Events, Logs, CLI, Settings).
 
 Visual style: inspired by the AWS Management Console (dark navy top bar `#232f3e`, orange accent `#ff9900` for primary buttons, white content area, light gray panels, compact tables).
 

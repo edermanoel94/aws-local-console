@@ -2,6 +2,7 @@
 
 AWS Local Console is a web application to explore and operate AWS services visually, with an interface inspired by the AWS Management Console.
 It uses [Floci](https://github.com/floci-io/floci) as the local AWS runtime, so everything runs on your machine without an AWS account.
+It can also operate a real AWS account instead, with the AWS credentials of its environment (see [Use a real AWS account](#use-a-real-aws-account)).
 
 You can list, create, inspect, edit and delete resources, run arbitrary AWS operations, inspect requests and responses, browse logs and events, and explore relationships between resources.
 The console has a light and a dark theme, and by default follows the one of your operating system; pick one from the top bar or in Settings.
@@ -27,6 +28,35 @@ Settings (shell variables or an `.env` file next to the compose file):
 | `FLOCI_ENDPOINT` | `http://floci:4566` | Floci URL used by the console |
 
 The Docker Hub page text lives in [`docker/README.dockerhub.md`](docker/README.dockerhub.md).
+
+## Use a real AWS account
+
+With `CONSOLE_TARGET=aws` the console operates a real AWS account instead of Floci: one account, the one of the credentials the Go API has.
+To work with another account, restart the console with other credentials.
+[`compose.aws.yaml`](compose.aws.yaml) runs only the console (no Floci) in this mode:
+
+```bash
+# Credentials from your shell...
+export AWS_ACCESS_KEY_ID=... AWS_SECRET_ACCESS_KEY=... AWS_SESSION_TOKEN=... AWS_REGION=us-east-1
+# ...or from a profile in ~/.aws (mounted read only; run `aws sso login` first for SSO profiles)
+export AWS_PROFILE=my-profile
+
+docker compose -f compose.aws.yaml up -d --wait   # published image
+make up-aws                                       # image built from this checkout
+```
+
+Then open http://localhost:4500; stop it with `docker compose -f compose.aws.yaml down` (or `make down-aws`).
+From a checkout, `make dev-backend-aws` runs the Go API on the host with the credentials of your shell, next to `make dev-frontend`.
+
+How it behaves:
+
+- Credentials come from the AWS SDK default chain: `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY`/`AWS_SESSION_TOKEN`, then `AWS_PROFILE` (or the default profile) with static keys, assume role, `credential_process` or SSO, then web identity, container and instance roles.
+- The region comes from `AWS_REGION`, `AWS_DEFAULT_REGION` or the profile; the console does not start without one.
+- The account id comes from `sts:GetCallerIdentity`; the top bar pill shows `AWS` with the credentials state, and Settings shows the account, identity and credentials source.
+  Missing or expired credentials show as `Unauthorized` without stopping the console, and are picked up again once they work.
+- Everything the console does is a real AWS call, billed and with real effects: creating, invoking and deleting work exactly like in the AWS console, with the permissions of the credentials.
+- The Resource Explorer and the dashboard list resources in the console regions (the default region plus `us-east-1`, `us-east-2`, `us-west-2`, `eu-west-1` and `sa-east-1`).
+- The Coverage views (which operations Floci implements) are hidden, and Lambda functions need an existing execution role (the form suggests the roles that trust Lambda).
 
 ## Architecture
 
@@ -168,19 +198,21 @@ Console image environment variables (defaults already suit Compose):
 
 | Variable | Default | Description |
 |---|---|---|
+| `CONSOLE_TARGET` | `floci` | `floci`, or `aws` to operate a real AWS account (see [Use a real AWS account](#use-a-real-aws-account)) |
 | `FLOCI_ENDPOINT` | `http://floci:4566` | Floci endpoint as seen from the container |
 | `PORT` | `4500` | Port the web console listens on (the published port) |
 | `API_PORT` | `8080` | Internal port of the Go API inside the container (not published) |
-| `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | `us-east-1`, `test`, `test` | Region and credentials used against Floci |
+| `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | `us-east-1`, `test`, `test` on Floci | Region and credentials; on AWS, any variable of the AWS SDK default chain (no defaults) |
 
 Go API environment variables (when running it on the host):
 
 | Variable | Default | Description |
 |---|---|---|
-| `FLOCI_ENDPOINT` | `http://localhost:4566` | Floci endpoint (`http://floci:4566` inside Compose) |
-| `AWS_REGION` | `us-east-1` | Default region |
-| `AWS_ACCESS_KEY_ID` | `test` | Credentials accepted by Floci |
-| `AWS_SECRET_ACCESS_KEY` | `test` | Credentials accepted by Floci |
+| `CONSOLE_TARGET` | `floci` | `floci`, or `aws` for a real AWS account |
+| `FLOCI_ENDPOINT` | `http://localhost:4566` | Floci endpoint (`http://floci:4566` inside Compose); ignored on AWS |
+| `AWS_REGION` | `us-east-1` on Floci | Default region; on AWS, falls back to `AWS_DEFAULT_REGION` or the profile |
+| `AWS_ACCESS_KEY_ID` | `test` on Floci | Credentials accepted by Floci; on AWS, the AWS SDK default chain (also `AWS_SESSION_TOKEN`, `AWS_PROFILE`, ...) |
+| `AWS_SECRET_ACCESS_KEY` | `test` on Floci | Same as above |
 | `PORT` | `8080` | Port the API listens on |
 | `CORS_ORIGINS` | `http://localhost:4500` | Origins allowed to call the API directly from a browser (not needed by the console) |
 

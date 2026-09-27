@@ -13,6 +13,7 @@ import { useConsoleNav } from "../_shared/nav";
 import { useQueueOptions } from "../_shared/pickers";
 import { jsonText } from "../_shared/validation";
 import { getSubscriptionAttributes, subscriptionId } from "./subscriptions";
+import { useTarget } from "@/hooks/use-queries";
 
 /** Protocols that support raw message delivery. */
 const RAW_DELIVERY_PROTOCOLS = ["sqs", "http", "https", "firehose"];
@@ -246,6 +247,7 @@ function EditSubscriptionDialog({ subscriptionArn, attributes, onClose }: { subs
 const confirmSchema = z.object({ token: z.string().trim().min(1, "Enter the token or the SubscribeURL.") });
 
 function ConfirmSubscriptionDialog({ topicArn, onClose }: { topicArn: string; onClose: () => void }) {
+  const { isFloci } = useTarget();
   const form = useForm<{ token: string }>({ resolver: zodResolver(confirmSchema), defaultValues: { token: "" } });
   const confirm = useConsoleAction<{ token: string }>({
     run: (v, exec) => exec("sns", "ConfirmSubscription", { TopicArn: topicArn, Token: confirmationToken(v.token) }),
@@ -269,7 +271,8 @@ function ConfirmSubscriptionDialog({ topicArn, onClose }: { topicArn: string; on
     >
       <div className="flex flex-col gap-4">
         <p className="text-sm text-aws-muted">
-          SNS sent a SubscriptionConfirmation message to the endpoint. Paste its Token, or its whole SubscribeURL. Endpoints on your machine are reachable from Floci at host.docker.internal.
+          SNS sent a SubscriptionConfirmation message to the endpoint. Paste its Token, or its whole SubscribeURL.
+          {isFloci && " Endpoints on your machine are reachable from Floci at host.docker.internal."}
         </p>
         <TextField label="Token or SubscribeURL" autoComplete="off" error={form.formState.errors.token?.message} {...form.register("token")} />
         {confirm.error && <ErrorAlert error={confirm.error} />}

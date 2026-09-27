@@ -65,6 +65,34 @@ async function streamOptions(exec: Exec): Promise<ArnOption[]> {
   return streams.filter((s): s is ArnOption => s !== null).sort((a, b) => a.label.localeCompare(b.label));
 }
 
+interface Role {
+  RoleName: string;
+  Arn: string;
+  /** URL-encoded JSON trust policy. */
+  AssumeRolePolicyDocument?: string | null;
+}
+
+function trustsLambda(role: Role): boolean {
+  const document = role.AssumeRolePolicyDocument ?? "";
+  try {
+    return decodeURIComponent(document).includes("lambda.amazonaws.com");
+  } catch {
+    return document.includes("lambda.amazonaws.com");
+  }
+}
+
+async function lambdaRoleOptions(exec: Exec): Promise<ArnOption[]> {
+  const roles = await listAllPages<{ Roles?: Role[] | null; IsTruncated?: boolean; Marker?: string | null }, Role>(exec, "iam", "ListRoles", { MaxItems: 1000 }, {
+    items: (out) => out.Roles,
+    next: (out) => (out.IsTruncated ? out.Marker : null),
+    tokenField: "Marker",
+  });
+  return roles
+    .filter(trustsLambda)
+    .map((r) => ({ value: r.Arn, label: r.RoleName }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+}
+
 /** Existing SQS queues as ARN options (for triggers, subscriptions, rule targets, notifications). */
 export function useQueueOptions(enabled = true) {
   return useAwsLoader(["pickers", "sqs"], queueOptions, { enabled });
@@ -76,6 +104,11 @@ export function useFunctionOptions(enabled = true) {
 
 export function useTopicOptions(enabled = true) {
   return useAwsLoader(["pickers", "sns"], topicOptions, { enabled });
+}
+
+/** IAM roles whose trust policy lets Lambda assume them (execution role candidates). */
+export function useLambdaRoleOptions(enabled = true) {
+  return useAwsLoader(["pickers", "iam", "lambda-roles"], lambdaRoleOptions, { enabled });
 }
 
 /** DynamoDB tables with a stream turned on, as stream ARN options labeled by table name (for Lambda triggers). */

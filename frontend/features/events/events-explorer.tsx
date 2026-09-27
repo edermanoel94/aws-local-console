@@ -50,7 +50,7 @@ export function EventsExplorer() {
       <Panel
         title="Events"
         count={events.data?.length}
-        description="Derived from successful mutating operations against Floci."
+        description="Derived from successful mutating operations run from the console."
         actions={
           <>
             <label className="flex cursor-pointer items-center gap-2 text-sm">

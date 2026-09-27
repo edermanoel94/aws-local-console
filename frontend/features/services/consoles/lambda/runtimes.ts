@@ -1,4 +1,4 @@
-/** Runtimes offered for inline code editing (Floci runs them with the public.ecr.aws/lambda base images). */
+/** Runtimes offered for inline code editing (Floci runs them with the public.ecr.aws/lambda base images, AWS natively). */
 
 type Family = "nodejs" | "python" | "ruby";
 
@@ -17,7 +17,8 @@ export const RUNTIMES: RuntimeOption[] = [
   { value: "ruby3.3", label: "Ruby 3.3", family: "ruby" },
 ];
 
-export const DEFAULT_ROLE = "arn:aws:iam::000000000000:role/lambda-role";
+/** Execution role prefilled on Floci, which does not check that the role exists. */
+export const FLOCI_DEFAULT_ROLE = "arn:aws:iam::000000000000:role/lambda-role";
 
 const EXTENSIONS: Record<Family, string> = { nodejs: ".mjs", python: ".py", ruby: ".rb" };
 

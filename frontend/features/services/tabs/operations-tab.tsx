@@ -6,10 +6,12 @@ import { Play, Search } from "lucide-react";
 import type { ServiceDetail } from "@/types/api";
 import { Badge, EmptyState, Panel, SelectField, Table, Td, Th, Tr } from "@/components/ui";
 import { CoverageBadge } from "@/components/aws/status-badges";
+import { useTarget } from "@/hooks/use-queries";
 
-/** Searchable operation list with coverage and a "Try it" shortcut into the API Explorer. */
+/** Searchable operation list with coverage (Floci only) and a "Try it" shortcut into the API Explorer. */
 export function OperationsTab({ service: s }: { service: ServiceDetail }) {
   const [q, setQ] = useState("");
+  const { isFloci } = useTarget();
   const [coverage, setCoverage] = useState("");
   const [access, setAccess] = useState("");
   const query = q.trim().toLowerCase();
@@ -20,11 +22,11 @@ export function OperationsTab({ service: s }: { service: ServiceDetail }) {
         .filter(
           (o) =>
             (!query || o.name.toLowerCase().includes(query)) &&
-            (!coverage || o.coverage === coverage) &&
+            (!isFloci || !coverage || o.coverage === coverage) &&
             (!access || (access === "write") === o.mutating),
         )
         .sort((a, b) => a.name.localeCompare(b.name)),
-    [s.operations, query, coverage, access],
+    [s.operations, query, isFloci, coverage, access],
   );
 
   return (
@@ -46,18 +48,20 @@ export function OperationsTab({ service: s }: { service: ServiceDetail }) {
             />
           </div>
         </div>
-        <SelectField
-          label="Coverage"
-          className="min-w-36 flex-1"
-          value={coverage}
-          onChange={(e) => setCoverage(e.target.value)}
-          options={[
-            { value: "", label: "Any coverage" },
-            { value: "supported", label: "Supported" },
-            { value: "unsupported", label: "Unsupported" },
-            { value: "untested", label: "Untested" },
-          ]}
-        />
+        {isFloci && (
+          <SelectField
+            label="Coverage"
+            className="min-w-36 flex-1"
+            value={coverage}
+            onChange={(e) => setCoverage(e.target.value)}
+            options={[
+              { value: "", label: "Any coverage" },
+              { value: "supported", label: "Supported" },
+              { value: "unsupported", label: "Unsupported" },
+              { value: "untested", label: "Untested" },
+            ]}
+          />
+        )}
         <SelectField
           label="Access"
           className="min-w-32 flex-1"
@@ -78,7 +82,7 @@ export function OperationsTab({ service: s }: { service: ServiceDetail }) {
             <tr>
               <Th className="pl-5">Operation</Th>
               <Th>Access</Th>
-              <Th>Coverage</Th>
+              {isFloci && <Th>Coverage</Th>}
               <Th>Required input</Th>
               <Th className="pr-5 text-right">
                 <span className="sr-only">Actions</span>
@@ -94,9 +98,11 @@ export function OperationsTab({ service: s }: { service: ServiceDetail }) {
                   <Td>
                     <Badge tone={o.mutating ? "orange" : "blue"}>{o.mutating ? "Write" : "Read"}</Badge>
                   </Td>
-                  <Td>
-                    <CoverageBadge coverage={o.coverage} />
-                  </Td>
+                  {isFloci && (
+                    <Td>
+                      <CoverageBadge coverage={o.coverage} />
+                    </Td>
+                  )}
                   <Td className="max-w-40 truncate xl:max-w-80 font-mono text-[12px] text-aws-muted" title={required.join(", ")}>
                     {required.length ? required.join(", ") : "-"}
                   </Td>

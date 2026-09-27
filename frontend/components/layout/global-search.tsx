@@ -6,7 +6,7 @@ import { useQueries, useQuery } from "@tanstack/react-query";
 import { Braces, CornerDownLeft, Search, Tag } from "lucide-react";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/cn";
-import { queryKeys, useServices } from "@/hooks/use-queries";
+import { queryKeys, useServices, useTarget } from "@/hooks/use-queries";
 import { useRegion } from "@/hooks/use-region";
 import { ServiceIcon, SERVICE_SHORT_NAMES } from "@/components/aws/service-icon";
 import { NAV_ITEMS } from "./navigation";
@@ -49,6 +49,7 @@ export function GlobalSearch({ open, onClose }: { open: boolean; onClose: () => 
 function Palette({ onClose }: { onClose: () => void }) {
   const router = useRouter();
   const region = useRegion();
+  const { isFloci } = useTarget();
   const inputId = useId();
   const listId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -138,7 +139,7 @@ function Palette({ onClose }: { onClose: () => void }) {
           subtitle: `${SERVICE_SHORT_NAMES[o.service] ?? o.service} operation`,
           href: `/api-explorer?service=${encodeURIComponent(o.service)}&operation=${encodeURIComponent(o.name)}`,
           icon: <Braces className="size-4 text-aws-muted" />,
-          badge: o.coverage.charAt(0).toUpperCase() + o.coverage.slice(1),
+          badge: isFloci ? o.coverage.charAt(0).toUpperCase() + o.coverage.slice(1) : o.mutating ? "Write" : "Read",
         });
       }
     }
@@ -148,7 +149,7 @@ function Palette({ onClose }: { onClose: () => void }) {
       limited.push(...out.filter((i) => i.group === group).slice(0, GROUP_LIMITS[group]));
     }
     return limited;
-  }, [q, services.data, resources.data, details]);
+  }, [q, services.data, resources.data, details, isFloci]);
 
   const activeIndex = Math.min(active, Math.max(items.length - 1, 0));
   const activeItem = items[activeIndex];

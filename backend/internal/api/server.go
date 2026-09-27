@@ -13,7 +13,7 @@ import (
 
 	"github.com/edermanoel94/aws-local-console/backend/internal/architecture"
 	"github.com/edermanoel94/aws-local-console/backend/internal/audit"
-	awsfloci "github.com/edermanoel94/aws-local-console/backend/internal/aws"
+	consoleaws "github.com/edermanoel94/aws-local-console/backend/internal/aws"
 	"github.com/edermanoel94/aws-local-console/backend/internal/cli"
 	"github.com/edermanoel94/aws-local-console/backend/internal/coverage"
 	"github.com/edermanoel94/aws-local-console/backend/internal/environments"
@@ -29,7 +29,7 @@ var Version = "dev"
 // Dependencies are the components the HTTP layer uses.
 type Dependencies struct {
 	Config       environments.Config
-	Factory      *awsfloci.Factory
+	Factory      *consoleaws.Factory
 	Registry     *services.Registry
 	Catalog      *operations.Catalog
 	Coverage     *coverage.Tracker
@@ -38,7 +38,7 @@ type Dependencies struct {
 	Discoverer   *resources.Discoverer
 	Architecture *architecture.Builder
 	CLI          *cli.Runner
-	Floci        *awsfloci.FlociMonitor
+	Monitor      *consoleaws.Monitor
 	Logger       *slog.Logger
 }
 
@@ -52,7 +52,7 @@ func NewHandler(deps Dependencies) http.Handler {
 	s := &Server{Dependencies: deps}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v1/health", s.health)
-	mux.HandleFunc("GET /api/v1/floci/status", s.flociStatus)
+	mux.HandleFunc("GET /api/v1/target", s.targetStatus)
 	mux.HandleFunc("GET /api/v1/services", s.listServices)
 	mux.HandleFunc("GET /api/v1/services/{service}", s.getService)
 	mux.HandleFunc("GET /api/v1/services/{service}/operations", s.listOperations)
@@ -186,36 +186,46 @@ func (s *Server) health(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok", "version": Version})
 }
 
-func (s *Server) flociStatus(w http.ResponseWriter, r *http.Request) {
-	health := s.Floci.Check(r.Context())
+// targetStatus describes what the console operates (Floci or AWS) and checks its health now.
+func (s *Server) targetStatus(w http.ResponseWriter, r *http.Request) {
+	status := s.Monitor.Check(r.Context())
 	type serviceStatus struct {
 		ID     string `json:"id"`
 		Status string `json:"status"`
 	}
 	body := struct {
-		Endpoint  string          `json:"endpoint"`
-		Healthy   bool            `json:"healthy"`
-		Status    string          `json:"status"`
-		Version   string          `json:"version,omitempty"`
-		Edition   string          `json:"edition,omitempty"`
-		Services  []serviceStatus `json:"services"`
-		LatencyMs int64           `json:"latencyMs"`
-		Error     string          `json:"error,omitempty"`
+		Target           environments.Target `json:"target"`
+		Name             string              `json:"name"`
+		Endpoint         string              `json:"endpoint,omitempty"`
+		Region           string              `json:"region"`
+		AccountID        string              `json:"accountId"`
+		IdentityARN      string              `json:"identityArn,omitempty"`
+		CredentialSource string              `json:"credentialSource,omitempty"`
+		Healthy          bool                `json:"healthy"`
+		Status           string              `json:"status"`
+		Version          string              `json:"version,omitempty"`
+		Edition          string              `json:"edition,omitempty"`
+		Services         []serviceStatus     `json:"services"`
+		LatencyMs        int64               `json:"latencyMs"`
+		Error            string              `json:"error,omitempty"`
 	}{
-		Endpoint:  s.Floci.Endpoint(),
-		Healthy:   health.Healthy,
-		Status:    "Unreachable",
-		Version:   health.Version,
-		Edition:   health.Edition,
-		Services:  []serviceStatus{},
-		LatencyMs: health.Latency.Milliseconds(),
-		Error:     health.Error,
+		Target:           s.Config.Target,
+		Name:             s.Config.Target.DisplayName(),
+		Endpoint:         s.Factory.FlociEndpoint(),
+		Region:           s.Config.DefaultRegion,
+		AccountID:        s.Monitor.AccountID(),
+		IdentityARN:      status.Identity.ARN,
+		CredentialSource: status.CredentialSource,
+		Healthy:          status.Healthy,
+		Status:           status.State,
+		Version:          status.Version,
+		Edition:          status.Edition,
+		Services:         []serviceStatus{},
+		LatencyMs:        status.Latency.Milliseconds(),
+		Error:            status.Error,
 	}
-	if health.Healthy {
-		body.Status = "Healthy"
-	}
-	for _, id := range health.ServiceIDs() {
-		body.Services = append(body.Services, serviceStatus{ID: id, Status: health.Services[id]})
+	for _, id := range status.ServiceIDs() {
+		body.Services = append(body.Services, serviceStatus{ID: id, Status: status.Services[id]})
 	}
 	writeJSON(w, http.StatusOK, body)
 }

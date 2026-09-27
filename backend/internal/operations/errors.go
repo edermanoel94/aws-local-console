@@ -13,7 +13,8 @@ import (
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 
 	"github.com/edermanoel94/aws-local-console/backend/internal/audit"
-	awsfloci "github.com/edermanoel94/aws-local-console/backend/internal/aws"
+	consoleaws "github.com/edermanoel94/aws-local-console/backend/internal/aws"
+	"github.com/edermanoel94/aws-local-console/backend/internal/environments"
 )
 
 // How Floci answers operations it does not implement (probed against Floci
@@ -33,6 +34,9 @@ import (
 //
 // Regular AWS errors (NoSuchBucket, ResourceNotFoundException, ...) always
 // carry an AWS error code, which is what separates them from missing routes.
+//
+// Real AWS implements every operation of its SDK, so with TargetAWS these
+// answers are regular AWS errors and nothing is classified as unsupported.
 var unsupportedCodes = map[string]bool{
 	"UnknownOperationException":     true,
 	"UnknownOperation":              true,
@@ -49,7 +53,8 @@ type classifiedError struct {
 	httpStatus int
 }
 
-func classifyError(err error, exchange awsfloci.Exchange) classifiedError {
+func classifyError(err error, exchange consoleaws.Exchange, target environments.Target) classifiedError {
+	floci := target == environments.TargetFloci
 	status := exchange.StatusCode
 	var responseErr *smithyhttp.ResponseError
 	if errors.As(err, &responseErr) && responseErr.Response != nil {
@@ -73,7 +78,7 @@ func classifyError(err error, exchange awsfloci.Exchange) classifiedError {
 			message = strings.TrimSpace(apiErr.Error())
 		}
 		kind := audit.KindAWS
-		if isUnsupported(code, status, exchange) {
+		if floci && isUnsupported(code, status, exchange) {
 			kind = audit.KindUnsupported
 			code, message = unsupportedCode(code, status), unsupportedMessage(message, status, exchange)
 		}
@@ -81,22 +86,25 @@ func classifyError(err error, exchange awsfloci.Exchange) classifiedError {
 	}
 
 	if status > 0 {
-		// Floci answered but the SDK could not parse it (typically an HTML or
-		// empty body on a route that does not exist).
-		if isUnsupported("", status, exchange) {
+		// The target answered but the SDK could not parse it (on Floci,
+		// typically an HTML or empty body on a route that does not exist).
+		if floci && isUnsupported("", status, exchange) {
 			return classifiedError{Error: audit.Error{Kind: audit.KindUnsupported, Code: unsupportedCode("", status), Message: unsupportedMessage("", status, exchange)}, httpStatus: status}
 		}
 		if status >= 400 {
 			return classifiedError{Error: audit.Error{Kind: audit.KindAWS, Code: "HTTP" + strconv.Itoa(status), Message: rootMessage(err)}, httpStatus: status}
 		}
-		return classifiedError{Error: audit.Error{Kind: audit.KindAWS, Code: "InvalidResponse", Message: "Floci returned a response the AWS SDK could not parse: " + rootMessage(err)}, httpStatus: status}
+		return classifiedError{Error: audit.Error{Kind: audit.KindAWS, Code: "InvalidResponse", Message: target.DisplayName() + " returned a response the AWS SDK could not parse: " + rootMessage(err)}, httpStatus: status}
 	}
 
+	if reason, ok := credentialsError(err); ok && !exchange.Sent {
+		return classifiedError{Error: audit.Error{Kind: audit.KindApplication, Code: "CredentialsError", Message: "could not load AWS credentials: " + reason}}
+	}
 	if isNetworkError(err) || exchange.Sent {
-		return classifiedError{Error: audit.Error{Kind: audit.KindNetwork, Code: "NetworkError", Message: "Floci is unreachable at " + exchange.URL + ": " + rootMessage(err)}}
+		return classifiedError{Error: audit.Error{Kind: audit.KindNetwork, Code: "NetworkError", Message: target.DisplayName() + " is unreachable at " + exchange.URL + ": " + rootMessage(err)}}
 	}
 	// The SDK refused to build the request (e.g. S3 Express operations need a
-	// bucket-scoped session identity): nothing was sent to Floci.
+	// bucket-scoped session identity): nothing was sent.
 	var operationErr *smithy.OperationError
 	if errors.As(err, &operationErr) {
 		return classifiedError{Error: audit.Error{Kind: audit.KindValidation, Code: "ClientError", Message: "the AWS SDK rejected the request before sending it: " + rootMessage(err)}}
@@ -104,7 +112,7 @@ func classifyError(err error, exchange awsfloci.Exchange) classifiedError {
 	return classifiedError{Error: audit.Error{Kind: audit.KindApplication, Code: "InternalError", Message: err.Error()}}
 }
 
-func isUnsupported(code string, status int, exchange awsfloci.Exchange) bool {
+func isUnsupported(code string, status int, exchange consoleaws.Exchange) bool {
 	if unsupportedCodes[code] || status == 501 {
 		return true
 	}
@@ -129,7 +137,7 @@ func unsupportedCode(code string, status int) string {
 	return "UnsupportedOperation"
 }
 
-func unsupportedMessage(message string, status int, exchange awsfloci.Exchange) string {
+func unsupportedMessage(message string, status int, exchange consoleaws.Exchange) string {
 	if message != "" && message != "UnknownError" && !strings.Contains(message, "<html") && !strings.HasPrefix(message, "api error") {
 		return message
 	}
@@ -169,6 +177,14 @@ func messageFromBody(body string) string {
 		}
 	}
 	return ""
+}
+
+// credentialsError returns why the SDK could not resolve the credentials to
+// sign the request with. The SDK has no typed error for it: its GetIdentity
+// middleware wraps the provider error as "get identity: ...".
+func credentialsError(err error) (string, bool) {
+	_, reason, found := strings.Cut(err.Error(), "get identity: ")
+	return strings.TrimPrefix(reason, "get credentials: "), found
 }
 
 func isNetworkError(err error) bool {

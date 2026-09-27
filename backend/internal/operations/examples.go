@@ -8,12 +8,15 @@ import (
 
 // Placeholder resource names used by examples. They are consistent across
 // operations so that examples can be chained (create queue, then send to it).
+// They are written for Floci; ExampleTarget.localize rewrites the account,
+// region and queue URLs for another target.
 const (
-	exampleAccount  = "000000000000"
-	exampleRegion   = "us-east-1"
-	exampleQueueURL = "http://localhost:4566/" + exampleAccount + "/my-queue"
-	exampleQueueARN = "arn:aws:sqs:" + exampleRegion + ":" + exampleAccount + ":my-queue"
-	exampleTopicARN = "arn:aws:sns:" + exampleRegion + ":" + exampleAccount + ":my-topic"
+	exampleAccount      = "000000000000"
+	exampleRegion       = "us-east-1"
+	exampleQueueURLBase = "http://localhost:4566"
+	exampleQueueURL     = exampleQueueURLBase + "/" + exampleAccount + "/my-queue"
+	exampleQueueARN     = "arn:aws:sqs:" + exampleRegion + ":" + exampleAccount + ":my-queue"
+	exampleTopicARN     = "arn:aws:sns:" + exampleRegion + ":" + exampleAccount + ":my-topic"
 	// Floci labels streams with the creation time; take the real ARN from DescribeTable.LatestStreamArn.
 	exampleStreamARN = "arn:aws:dynamodb:" + exampleRegion + ":" + exampleAccount + ":table/my-table/stream/2026-01-01T00:00:00.000"
 	exampleFunction  = "arn:aws:lambda:" + exampleRegion + ":" + exampleAccount + ":function:my-function"
@@ -250,20 +253,68 @@ var placeholderByField = map[string]any{
 	"ExpectedBucketOwner": exampleAccount,
 }
 
-// Example returns a sensible example input for the operation.
-func (o *Operation) Example() map[string]any {
-	if example, ok := curatedExamples[o.Service+"."+o.Name]; ok {
-		return example
+// ExampleTarget is the account and region examples are written for.
+type ExampleTarget struct {
+	AccountID string
+	Region    string
+	// QueueURLBase is the SQS queue URL up to the account, e.g.
+	// "https://sqs.us-east-1.amazonaws.com".
+	QueueURLBase string
+}
+
+// FlociExamples is the target the example constants are written for.
+var FlociExamples = ExampleTarget{AccountID: exampleAccount, Region: exampleRegion, QueueURLBase: exampleQueueURLBase}
+
+// localize rewrites the Floci placeholders of an example value for t.
+func (t ExampleTarget) localize(value any) any {
+	if t == FlociExamples {
+		return value
 	}
-	example := map[string]any{}
-	for _, name := range o.Required {
-		field, ok := o.inputType.FieldByName(name)
-		if !ok {
-			continue
+	switch v := value.(type) {
+	case map[string]any:
+		result := make(map[string]any, len(v))
+		for key, item := range v {
+			result[key] = t.localize(item)
 		}
-		example[name] = placeholder(name, field.Type)
+		return result
+	case []any:
+		result := make([]any, len(v))
+		for i, item := range v {
+			result[i] = t.localize(item)
+		}
+		return result
+	case string:
+		if v == exampleAccount {
+			return t.AccountID
+		}
+		if v == exampleRegion {
+			return t.Region
+		}
+		// Only ARN and queue URL parts: other strings may contain runs of zeros (shard ids).
+		return strings.NewReplacer(
+			exampleQueueURLBase+"/"+exampleAccount+"/", t.QueueURLBase+"/"+t.AccountID+"/",
+			":"+exampleRegion+":"+exampleAccount+":", ":"+t.Region+":"+t.AccountID+":",
+			"::"+exampleAccount+":", "::"+t.AccountID+":",
+			":"+exampleRegion+":", ":"+t.Region+":",
+		).Replace(v)
 	}
-	return example
+	return value
+}
+
+// Example returns a sensible example input for the operation, for target t.
+func (o *Operation) Example(t ExampleTarget) map[string]any {
+	example, ok := curatedExamples[o.Service+"."+o.Name]
+	if !ok {
+		example = map[string]any{}
+		for _, name := range o.Required {
+			field, ok := o.inputType.FieldByName(name)
+			if !ok {
+				continue
+			}
+			example[name] = placeholder(name, field.Type)
+		}
+	}
+	return t.localize(example).(map[string]any)
 }
 
 func placeholder(name string, t reflect.Type) any {

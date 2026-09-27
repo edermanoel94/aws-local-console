@@ -20,7 +20,7 @@ export function GenericResources({ service: s }: { service: ServiceDetail }) {
       <Panel
         title="Resources"
         count={resources.data?.resources.length}
-        description={`${s.shortName} ${s.resourceTypes.join(", ") || "resources"} discovered in Floci. Use the API Explorer tab to create or change them.`}
+        description={`${s.shortName} ${s.resourceTypes.join(", ") || "resources"} discovered in the selected region. Use the API Explorer tab to create or change them.`}
         actions={
           <Button onClick={() => resources.refetch()} loading={resources.isFetching && !resources.isPending}>
             {!(resources.isFetching && !resources.isPending) && <RefreshCw className="size-4" aria-hidden />}

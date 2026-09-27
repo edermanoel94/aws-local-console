@@ -46,10 +46,10 @@ endef
 .DEFAULT_GOAL := help
 
 .PHONY: help up down logs build wait e2e e2e-ui e2e-report e2e-install clean \
-	dev-floci dev-backend dev-frontend deps release
+	up-aws down-aws dev-floci dev-backend dev-backend-aws dev-frontend deps release
 
 help: ## Show available targets
-	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z0-9_-]+:.*## / {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z0-9_-]+:.*## / {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
 # ---------------------------------------------------------------------------
 # Full stack (Docker Compose)
@@ -74,6 +74,18 @@ build: ## Build the console image (Go API + Next.js)
 wait: ## Wait for Floci and the console (web server and API) to answer
 	@$(WAIT_FOR) $(FLOCI_URL)/_floci/health $(WAIT_TIMEOUT) Floci
 	@$(WAIT_FOR) $(WEB_URL)/api/v1/health $(WAIT_TIMEOUT) "Console (web + API)"
+
+# ---------------------------------------------------------------------------
+# Real AWS account (no Floci), see compose.aws.yaml for the credentials
+# ---------------------------------------------------------------------------
+
+up-aws: ## Build the console image and run it against the AWS account of your credentials
+	$(COMPOSE) build console
+	CONSOLE_IMAGE=$(IMAGE):$${IMAGE_TAG:-dev} $(COMPOSE) -f compose.aws.yaml up -d --wait
+	@echo "AWS Local Console (AWS) is running at $(WEB_URL)"
+
+down-aws: ## Stop the console started with up-aws
+	$(COMPOSE) -f compose.aws.yaml down --remove-orphans
 
 # ---------------------------------------------------------------------------
 # End-to-end tests (Playwright, run from the repository root)
@@ -105,7 +117,7 @@ clean: ## Remove containers, volumes, Lambda containers and test artifacts
 	rm -rf playwright-report test-results blob-report playwright/.cache backend/bin
 
 # ---------------------------------------------------------------------------
-# Local development (Floci in Docker, API and web app on the host)
+# Local development (Floci in Docker or AWS, API and web app on the host)
 # ---------------------------------------------------------------------------
 
 dev-floci: ## Start only Floci and wait until it is healthy
@@ -115,6 +127,10 @@ dev-backend: ## Run the Go API on the host against Floci (go run)
 	cd backend && \
 		FLOCI_ENDPOINT=$(FLOCI_URL) AWS_REGION=us-east-1 AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test \
 		PORT=$(DEV_API_PORT) CORS_ORIGINS=$(WEB_URL) go run ./cmd/api
+
+dev-backend-aws: ## Run the Go API on the host against the AWS account of your credentials (go run)
+	cd backend && \
+		CONSOLE_TARGET=aws PORT=$(DEV_API_PORT) CORS_ORIGINS=$(WEB_URL) go run ./cmd/api
 
 dev-frontend: ## Run the Next.js dev server on the host
 	cd frontend && API_INTERNAL_URL=http://localhost:$(DEV_API_PORT) PORT=$(WEB_PORT) $(PNPM) dev

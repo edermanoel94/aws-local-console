@@ -1,41 +1,79 @@
-// Package environments holds the runtime configuration of the API: the Floci
-// endpoint, credentials, default region and the list of regions offered to the UI.
+// Package environments holds the runtime configuration of the API: the target
+// the console operates (Floci or a real AWS account), the Floci endpoint and
+// credentials, the default region and the list of regions offered to the UI.
 package environments
 
 import (
+	"fmt"
 	"os"
 	"strings"
 )
 
+// Target is what the console operates.
+type Target string
+
+const (
+	// TargetFloci is a local Floci emulator (the default).
+	TargetFloci Target = "floci"
+	// TargetAWS is a real AWS account, reached with the AWS SDK default
+	// credential chain (environment variables, shared config and credentials
+	// files, SSO, web identity, container and instance roles).
+	TargetAWS Target = "aws"
+)
+
+// DisplayName is the name the UI and messages use for the target.
+func (t Target) DisplayName() string {
+	if t == TargetAWS {
+		return "AWS"
+	}
+	return "Floci"
+}
+
+// FlociAccountID is the fixed account id of every Floci resource.
+const FlociAccountID = "000000000000"
+
 // Config is the process configuration, read from environment variables.
 type Config struct {
+	Target Target
+	// FlociEndpoint, AccessKeyID and SecretAccessKey are only used with TargetFloci.
 	FlociEndpoint   string
-	DefaultRegion   string
 	AccessKeyID     string
 	SecretAccessKey string
-	Port            string
-	CORSOrigins     []string
-	AccountID       string
+	// DefaultRegion is empty with TargetAWS when AWS_REGION is not set: the SDK
+	// then resolves it from AWS_DEFAULT_REGION or the shared config profile.
+	DefaultRegion string
+	Port          string
+	CORSOrigins   []string
 }
 
 // Load reads the configuration from the environment, applying defaults suited
 // for local development.
-func Load() Config {
+func Load() (Config, error) {
 	origins := []string{}
 	for _, origin := range strings.Split(getenv("CORS_ORIGINS", "http://localhost:4500"), ",") {
 		if origin = strings.TrimSpace(origin); origin != "" {
 			origins = append(origins, origin)
 		}
 	}
-	return Config{
-		FlociEndpoint:   strings.TrimRight(getenv("FLOCI_ENDPOINT", "http://localhost:4566"), "/"),
-		DefaultRegion:   getenv("AWS_REGION", "us-east-1"),
-		AccessKeyID:     getenv("AWS_ACCESS_KEY_ID", "test"),
-		SecretAccessKey: getenv("AWS_SECRET_ACCESS_KEY", "test"),
-		Port:            getenv("PORT", "8080"),
-		CORSOrigins:     origins,
-		AccountID:       "000000000000",
+	target := Target(strings.ToLower(getenv("CONSOLE_TARGET", string(TargetFloci))))
+	if target != TargetFloci && target != TargetAWS {
+		return Config{}, fmt.Errorf("CONSOLE_TARGET must be %q or %q, got %q", TargetFloci, TargetAWS, target)
 	}
+	cfg := Config{
+		Target:      target,
+		Port:        getenv("PORT", "8080"),
+		CORSOrigins: origins,
+	}
+	switch target {
+	case TargetFloci:
+		cfg.FlociEndpoint = strings.TrimRight(getenv("FLOCI_ENDPOINT", "http://localhost:4566"), "/")
+		cfg.AccessKeyID = getenv("AWS_ACCESS_KEY_ID", "test")
+		cfg.SecretAccessKey = getenv("AWS_SECRET_ACCESS_KEY", "test")
+		cfg.DefaultRegion = getenv("AWS_REGION", "us-east-1")
+	case TargetAWS:
+		cfg.DefaultRegion = getenv("AWS_REGION", "")
+	}
+	return cfg, nil
 }
 
 func getenv(key, fallback string) string {

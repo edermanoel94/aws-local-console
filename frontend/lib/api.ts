@@ -7,7 +7,7 @@ import type {
   DashboardSummary,
   ExecuteRequest,
   ExecuteResponse,
-  FlociStatus,
+  TargetStatus,
   LogEntry,
   Region,
   ResourceEvent,
@@ -69,7 +69,7 @@ async function request<T>(path: string, init?: RequestInit & { query?: Query }):
 
 export const api = {
   health: () => request<{ status: string; version: string }>("/health"),
-  flociStatus: () => request<FlociStatus>("/floci/status"),
+  target: () => request<TargetStatus>("/target"),
   dashboard: () => request<DashboardSummary>("/dashboard"),
   services: () => request<{ services: ServiceSummary[] }>("/services").then((r) => r.services),
   service: (id: string) => request<ServiceDetail>(`/services/${id}`),
@@ -113,7 +113,7 @@ export class OperationError extends Error {
   }
 }
 
-/** Runs an operation from a service console and throws OperationError when AWS/Floci returned an error. */
+/** Runs an operation from a service console and throws OperationError when the target returned an error. */
 export async function executeOrThrow<T = unknown>(req: ExecuteRequest): Promise<{ output: T; result: ExecuteResponse }> {
   const result = await api.execute(req, "console");
   if (result.status === "error") throw new OperationError(result);

@@ -12,6 +12,7 @@ import { ResourceTable } from "../_shared/resource-table";
 import { DEFAULT_BUS, targetTypeOf, type Rule, type Target, type TargetType } from "./events-types";
 import { RuleStateBadge } from "./rule-list";
 import { addTarget, TargetFields } from "./targets";
+import { useTarget } from "@/hooks/use-queries";
 
 export function RuleDetail({ ruleName }: { ruleName: string }) {
   const { prefix, navigate } = useConsoleNav();
@@ -150,8 +151,9 @@ function AddTargetDialog({ rule, existingIds, onClose }: { rule: { name: string;
   const [type, setType] = useState<TargetType>("sqs");
   const [arn, setArn] = useState("");
   const [error, setError] = useState<string>();
+  const { isAws } = useTarget();
   const add = useConsoleAction<string>({
-    run: (targetArn, exec) => addTarget(exec, rule, targetArn, existingIds),
+    run: (targetArn, exec) => addTarget(exec, rule, targetArn, existingIds, isAws),
     successMessage: (targetArn) => `Target ${nameFromArn(targetArn)} added to rule ${rule.name}`,
     onSuccess: onClose,
   });

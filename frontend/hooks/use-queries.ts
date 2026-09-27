@@ -17,8 +17,26 @@ export function useService(id: string) {
   return useQuery({ queryKey: queryKeys.service(id), queryFn: () => api.service(id), staleTime: 15_000 });
 }
 
-export function useFlociStatus() {
-  return useQuery({ queryKey: queryKeys.flociStatus, queryFn: api.flociStatus, refetchInterval: 10_000, retry: 0 });
+/** Target (Floci or AWS) and its health, polled every 10s. */
+export function useTargetStatus() {
+  return useQuery({ queryKey: queryKeys.target, queryFn: api.target, refetchInterval: 10_000, retry: 0 });
+}
+
+/**
+ * What the console operates (Floci or the single AWS account of the Go API credentials),
+ * from the same query as useTargetStatus.
+ * `target` is undefined until the first answer; Floci-only UI (coverage, host hints) waits for it.
+ */
+export function useTarget() {
+  const { data } = useTargetStatus();
+  return {
+    target: data?.target,
+    isFloci: data?.target === "floci",
+    isAws: data?.target === "aws",
+    /** "Floci" or "AWS"; Floci (the Go API default) until the first answer. */
+    name: data?.name ?? "Floci",
+    accountId: data?.accountId ?? "",
+  };
 }
 
 export function useDashboard() {

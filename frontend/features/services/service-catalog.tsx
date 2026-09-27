@@ -8,7 +8,7 @@ import { EmptyState, ErrorAlert, Loading } from "@/components/ui";
 import { PageHeader } from "@/components/layout/page-header";
 import { CATEGORY_COLORS, CATEGORY_ICONS, ServiceIcon } from "@/components/aws/service-icon";
 import { AvailabilityBadge, CoverageBar } from "@/components/aws/status-badges";
-import { useServices } from "@/hooks/use-queries";
+import { useServices, useTarget } from "@/hooks/use-queries";
 import { FavoriteToggle } from "./favorite-toggle";
 
 export const CATEGORIES: ServiceCategory[] = [
@@ -24,6 +24,7 @@ export const CATEGORIES: ServiceCategory[] = [
 
 export function ServiceCatalog() {
   const services = useServices();
+  const target = useTarget();
   const [query, setQuery] = useState("");
   const [availableOnly, setAvailableOnly] = useState(false);
   const q = query.trim().toLowerCase();
@@ -72,7 +73,7 @@ export function ServiceCatalog() {
         </label>
         {services.data && (
           <p className="ml-auto flex h-9 items-center text-sm text-aws-muted">
-            <span className="font-bold text-aws-ink">{available}</span>&nbsp;of {total} services available on Floci
+            <span className="font-bold text-aws-ink">{available}</span>&nbsp;of {total} services available{target.target ? ` on ${target.name}` : ""}
           </p>
         )}
       </div>
@@ -126,6 +127,7 @@ function CategorySection({ category, services }: { category: ServiceCategory; se
 }
 
 function ServiceRow({ service: s }: { service: ServiceSummary }) {
+  const { isFloci } = useTarget();
   return (
     <article className="group relative flex items-start gap-3 px-5 py-3.5 transition-colors hover:bg-aws-panel/60">
       <ServiceIcon service={s.id} category={s.category} size="lg" />
@@ -146,7 +148,7 @@ function ServiceRow({ service: s }: { service: ServiceSummary }) {
           <span className="text-xs text-aws-muted">
             <span className="font-bold text-aws-ink tabular-nums">{s.operationCount}</span> operations
           </span>
-          <CoverageBar coverage={s.coverage} compact className="min-w-40 flex-1" />
+          {isFloci && <CoverageBar coverage={s.coverage} compact className="min-w-40 flex-1" />}
         </div>
       </div>
       <FavoriteToggle serviceId={s.id} label={s.shortName} className="-mt-1 -mr-1" />

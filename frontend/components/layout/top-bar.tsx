@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Menu, Search } from "lucide-react";
 import { RegionSelector } from "./region-selector";
-import { FlociStatusPill } from "./floci-status-pill";
+import { TargetStatusPill } from "./target-status-pill";
 import { ThemeMenu } from "./theme-menu";
 
 export function TopBar({ onToggleSidebar, onOpenSearch, shortcut }: { onToggleSidebar: () => void; onOpenSearch: () => void; shortcut: string }) {
@@ -38,7 +38,7 @@ export function TopBar({ onToggleSidebar, onOpenSearch, shortcut }: { onToggleSi
       </div>
 
       <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-        <FlociStatusPill />
+        <TargetStatusPill />
         <RegionSelector />
         <ThemeMenu />
       </div>

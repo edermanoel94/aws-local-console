@@ -8,7 +8,7 @@ import { EmptyState, ErrorAlert, Loading, Tabs } from "@/components/ui";
 import { PageHeader } from "@/components/layout/page-header";
 import { ServiceIcon } from "@/components/aws/service-icon";
 import { AvailabilityBadge } from "@/components/aws/status-badges";
-import { useService } from "@/hooks/use-queries";
+import { useService, useTarget } from "@/hooks/use-queries";
 import { serviceConsoles } from "@/features/services/consoles";
 import { ApiExplorer } from "@/features/operations/api-explorer";
 import { LogsExplorer } from "@/features/logs/logs-explorer";
@@ -39,6 +39,7 @@ export function ServiceDetailView({ serviceId }: { serviceId: string }) {
   const router = useRouter();
   const pathname = usePathname();
   const service = useService(serviceId);
+  const { isFloci } = useTarget();
   const tabParam = searchParams.get("tab");
   const tab: TabValue = isTab(tabParam) ? tabParam : "overview";
 
@@ -83,7 +84,8 @@ export function ServiceDetailView({ serviceId }: { serviceId: string }) {
   const s = service.data;
   const Console = serviceConsoles[s.id];
   // Services without resources of their own (e.g. DynamoDB Streams) have no Resources tab.
-  const tabs = TABS.filter((t) => t.value !== "resources" || s.capabilities.includes("resources"));
+  // Coverage (which operations Floci implements) is meaningless on AWS, where every operation exists.
+  const tabs = TABS.filter((t) => (t.value !== "resources" || s.capabilities.includes("resources")) && (t.value !== "coverage" || isFloci));
   const active: TabValue = tabs.some((t) => t.value === tab) ? tab : "overview";
 
   return (

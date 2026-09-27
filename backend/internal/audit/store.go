@@ -40,15 +40,16 @@ func (r *ring[T]) newestFirst(visit func(T) bool) {
 
 // Store is the in-memory audit trail.
 type Store struct {
-	account string
+	account func() string
 
 	mu     sync.RWMutex
 	logs   *ring[LogEntry]
 	events *ring[ResourceEvent]
 }
 
-// NewStore returns a store keeping the newest capacity logs and events.
-func NewStore(capacity int, account string) *Store {
+// NewStore returns a store keeping the newest capacity logs and events;
+// account returns the target's account id, used in derived event ARNs.
+func NewStore(capacity int, account func() string) *Store {
 	return &Store{account: account, logs: newRing[LogEntry](capacity), events: newRing[ResourceEvent](capacity)}
 }
 
@@ -57,7 +58,7 @@ func NewStore(capacity int, account string) *Store {
 func (s *Store) Record(entry LogEntry, mutating bool) {
 	var event *ResourceEvent
 	if mutating && entry.Status == StatusSuccess {
-		derived := deriveEvent(entry, s.account)
+		derived := deriveEvent(entry, s.account())
 		event = &derived
 	}
 	s.mu.Lock()

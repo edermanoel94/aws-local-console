@@ -65,10 +65,10 @@ func (s *Server) dashboard(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	health := s.Floci.Cached(r.Context())
+	status := s.Monitor.Cached(r.Context())
 	available := 0
 	for _, def := range s.Registry.All() {
-		if health.Running(def.FlociID) {
+		if status.Available(def.FlociID) {
 			available++
 		}
 	}

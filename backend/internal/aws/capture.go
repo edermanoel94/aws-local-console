@@ -51,15 +51,18 @@ func CaptureOption(recorder *Recorder) func(*middleware.Stack) error {
 		return stack.Deserialize.Add(middleware.DeserializeMiddlewareFunc("ConsoleHTTPCapture",
 			func(ctx context.Context, in middleware.DeserializeInput, next middleware.DeserializeHandler) (middleware.DeserializeOutput, middleware.Metadata, error) {
 				if req, ok := in.Request.(*smithyhttp.Request); ok {
-					recorder.mu.Lock()
-					recorder.exchange.Sent = true
-					recorder.exchange.Method = req.Method
-					recorder.exchange.URL = req.URL.String()
 					host := req.Host
 					if host == "" {
 						host = req.URL.Host
 					}
-					recorder.exchange.RequestHeaders = flattenHeaders(req.Header, host)
+					// Each retry attempt runs this middleware again: keep only the last attempt.
+					recorder.mu.Lock()
+					recorder.exchange = Exchange{
+						Sent:           true,
+						Method:         req.Method,
+						URL:            req.URL.String(),
+						RequestHeaders: flattenHeaders(req.Header, host),
+					}
 					recorder.mu.Unlock()
 				}
 				out, metadata, err := next.HandleDeserialize(ctx, in)

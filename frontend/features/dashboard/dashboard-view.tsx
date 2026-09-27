@@ -9,7 +9,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { ServiceIcon, SERVICE_SHORT_NAMES, serviceColor } from "@/components/aws/service-icon";
 import { ExecutionStatusBadge, HttpStatusText } from "@/components/aws/status-badges";
 import { FavoriteToggle } from "@/features/services/favorite-toggle";
-import { useDashboard, useFlociStatus, useServices } from "@/hooks/use-queries";
+import { useDashboard, useServices, useTarget, useTargetStatus } from "@/hooks/use-queries";
 import { useHydrated } from "@/hooks/use-hydrated";
 import { usePreferences } from "@/stores/preferences";
 import { formatDuration, formatRelative } from "@/lib/format";
@@ -18,9 +18,10 @@ import type { LogEntry } from "@/types/api";
 export function DashboardView() {
   const qc = useQueryClient();
   const dashboard = useDashboard();
+  const target = useTarget();
   const refresh = () => {
     qc.invalidateQueries({ queryKey: ["dashboard"] });
-    qc.invalidateQueries({ queryKey: ["floci-status"] });
+    qc.invalidateQueries({ queryKey: ["target"] });
     qc.invalidateQueries({ queryKey: ["services"] });
   };
 
@@ -28,7 +29,11 @@ export function DashboardView() {
     <>
       <PageHeader
         title="Dashboard"
-        description="Welcome to your local AWS environment powered by Floci."
+        description={
+          target.isAws
+            ? `Your AWS account${target.accountId ? ` ${target.accountId}` : ""}, operated with the credentials of the Go API.`
+            : "Welcome to your local AWS environment powered by Floci."
+        }
         breadcrumbs={[{ label: "AWS Local Console", href: "/dashboard" }, { label: "Dashboard" }]}
         actions={
           <Button onClick={refresh} loading={dashboard.isFetching && !dashboard.isPending}>
@@ -44,7 +49,7 @@ export function DashboardView() {
         <StatCard
           label="Services"
           value={dashboard.data?.serviceCount}
-          hint={dashboard.data ? `${dashboard.data.availableServiceCount} available on Floci` : undefined}
+          hint={dashboard.data && target.target ? `${dashboard.data.availableServiceCount} available on ${target.name}` : undefined}
           href="/services"
           icon={<Layers className="size-5" />}
           loading={dashboard.isPending}
@@ -70,10 +75,10 @@ export function DashboardView() {
       <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-3">
         <div className="flex min-w-0 flex-col gap-4 xl:col-span-2">
           <RecentOperations loading={dashboard.isPending} failed={dashboard.isError} operations={dashboard.data?.recentOperations} />
-          <ResourcesByService loading={dashboard.isPending} failed={dashboard.isError} data={dashboard.data?.resourcesByService} />
+          <ResourcesByService loading={dashboard.isPending} failed={dashboard.isError} data={dashboard.data?.resourcesByService} errors={dashboard.data?.errors} />
         </div>
         <div className="flex min-w-0 flex-col gap-4">
-          <FlociStatusPanel />
+          <TargetStatusPanel />
           <FavoritesPanel />
         </div>
       </div>
@@ -166,7 +171,17 @@ function RecentOperations({ loading, failed, operations }: { loading: boolean; f
   );
 }
 
-function ResourcesByService({ loading, failed, data }: { loading: boolean; failed: boolean; data?: { service: string; count: number }[] }) {
+function ResourcesByService({
+  loading,
+  failed,
+  data,
+  errors = [],
+}: {
+  loading: boolean;
+  failed: boolean;
+  data?: { service: string; count: number }[];
+  errors?: { service: string; message: string }[];
+}) {
   const rows = (data ?? []).filter((r) => r.count > 0).sort((a, b) => b.count - a.count);
   const max = Math.max(1, ...rows.map((r) => r.count));
   return (
@@ -175,6 +190,12 @@ function ResourcesByService({ loading, failed, data }: { loading: boolean; faile
         <Loading />
       ) : failed ? (
         <Unavailable />
+      ) : rows.length === 0 && errors.length > 0 ? (
+        <EmptyState
+          title="Resources could not be listed"
+          description={`Listing failed for ${errors.map((e) => e.service).join(", ")}.`}
+          action={<Link href="/resources">See the errors in the Resource Explorer</Link>}
+        />
       ) : rows.length === 0 ? (
         <EmptyState title="No resources yet" description="Create a bucket, queue, table or function to see it here." />
       ) : (
@@ -191,18 +212,24 @@ function ResourcesByService({ loading, failed, data }: { loading: boolean; faile
               <span className="text-right font-bold tabular-nums">{r.count}</span>
             </li>
           ))}
+          {errors.length > 0 && (
+            <li className="text-sm text-aws-muted">
+              {errors.length} service{errors.length === 1 ? "" : "s"} could not be listed ({errors.map((e) => e.service).join(", ")}); details in the <Link href="/resources">Resource Explorer</Link>.
+            </li>
+          )}
         </ul>
       )}
     </Panel>
   );
 }
 
-function FlociStatusPanel() {
-  const status = useFlociStatus();
+function TargetStatusPanel() {
+  const status = useTargetStatus();
   const running = status.data?.services.filter((s) => s.status === "running" || s.status === "available").length;
+  const name = status.data?.name ?? "Target";
   return (
-    <section aria-label="Floci Status">
-      <Panel title="Floci Status" actions={<Link href="/settings" className="text-sm font-bold">Details</Link>}>
+    <section aria-label={`${name} Status`}>
+      <Panel title={`${name} Status`} actions={<Link href="/settings" className="text-sm font-bold">Details</Link>}>
         {status.isPending ? (
           <Loading />
         ) : status.isError ? (
@@ -214,28 +241,48 @@ function FlociStatusPanel() {
                 <span className={`size-3 rounded-full ${status.data.healthy ? "bg-aws-green" : "bg-aws-red"}`} />
               </span>
               <div>
-                <p className="text-xs text-aws-muted">Floci</p>
+                <p className="text-xs text-aws-muted">{status.data.name}</p>
                 <p className={`text-lg leading-tight font-bold ${status.data.healthy ? "text-aws-green" : "text-aws-red"}`}>{status.data.status}</p>
               </div>
             </div>
             <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
-              <dt className="text-aws-muted">Endpoint</dt>
-              <dd className="truncate font-mono text-[13px]" title={status.data.endpoint}>
-                {status.data.endpoint}
-              </dd>
-              <dt className="text-aws-muted">Version</dt>
-              <dd>{status.data.version ?? "-"}</dd>
-              {status.data.edition && (
+              {status.data.target === "aws" ? (
                 <>
-                  <dt className="text-aws-muted">Edition</dt>
-                  <dd className="capitalize">{status.data.edition}</dd>
+                  <dt className="text-aws-muted">Account</dt>
+                  <dd className="font-mono text-[13px]">{status.data.accountId || "-"}</dd>
+                  <dt className="text-aws-muted">Identity</dt>
+                  <dd className="truncate font-mono text-[13px]" title={status.data.identityArn ?? status.data.error}>
+                    {status.data.identityArn ?? "-"}
+                  </dd>
+                  <dt className="text-aws-muted">Region</dt>
+                  <dd className="font-mono text-[13px]">{status.data.region}</dd>
+                </>
+              ) : (
+                <>
+                  <dt className="text-aws-muted">Endpoint</dt>
+                  <dd className="truncate font-mono text-[13px]" title={status.data.endpoint}>
+                    {status.data.endpoint}
+                  </dd>
+                  <dt className="text-aws-muted">Version</dt>
+                  <dd>{status.data.version ?? "-"}</dd>
+                  {status.data.edition && (
+                    <>
+                      <dt className="text-aws-muted">Edition</dt>
+                      <dd className="capitalize">{status.data.edition}</dd>
+                    </>
+                  )}
                 </>
               )}
               <dt className="text-aws-muted">Latency</dt>
               <dd className="tabular-nums">{status.data.latencyMs}ms</dd>
-              <dt className="text-aws-muted">Services</dt>
-              <dd>{status.data.services.length ? `${running} of ${status.data.services.length} running` : "-"}</dd>
+              {status.data.target === "floci" && (
+                <>
+                  <dt className="text-aws-muted">Services</dt>
+                  <dd>{status.data.services.length ? `${running} of ${status.data.services.length} running` : "-"}</dd>
+                </>
+              )}
             </dl>
+            {status.data.error && status.data.target === "aws" && <p className="text-sm break-words text-aws-red">{status.data.error}</p>}
           </div>
         )}
       </Panel>

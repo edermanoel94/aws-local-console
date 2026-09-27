@@ -50,7 +50,7 @@ export function ResourceExplorer() {
       <Panel
         title="Resources"
         count={resources.data?.total ?? resources.data?.resources.length}
-        description="Everything discovered in Floci for the selected region."
+        description="Everything discovered for the selected region."
         actions={
           <Button onClick={() => resources.refetch()} loading={resources.isFetching && !resources.isPending}>
             {!(resources.isFetching && !resources.isPending) && <RefreshCw className="size-4" aria-hidden />}

@@ -7,7 +7,7 @@ export const queryKeys = {
   services: ["services"] as const,
   service: (id: string) => ["services", id] as const,
   regions: ["regions"] as const,
-  flociStatus: ["floci-status"] as const,
+  target: ["target"] as const,
   dashboard: ["dashboard"] as const,
   resources: (query: Record<string, string | undefined>) => ["resources", "all", query] as const,
   serviceResources: (service: string, region: string) => ["resources", "service", service, region] as const,

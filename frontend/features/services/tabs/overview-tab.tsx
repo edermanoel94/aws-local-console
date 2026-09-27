@@ -5,7 +5,7 @@ import { ArrowRight } from "lucide-react";
 import type { ServiceDetail } from "@/types/api";
 import { Badge, EmptyState, ErrorAlert, Loading, Panel } from "@/components/ui";
 import { AvailabilityBadge, CoverageBar, ExecutionStatusBadge } from "@/components/aws/status-badges";
-import { useLogs, useServiceResources } from "@/hooks/use-queries";
+import { useLogs, useServiceResources, useTarget } from "@/hooks/use-queries";
 import { formatRelative } from "@/lib/format";
 
 type Tab = "overview" | "resources" | "operations" | "api-explorer" | "activity" | "coverage";
@@ -14,6 +14,7 @@ export function OverviewTab({ service: s, onNavigate }: { service: ServiceDetail
   const hasResources = s.capabilities.includes("resources");
   const resources = useServiceResources(s.id, { enabled: hasResources });
   const logs = useLogs({ service: s.id, limit: 6 });
+  const { isFloci } = useTarget();
   const total = s.coverage.supported + s.coverage.unsupported + s.coverage.untested;
 
   return (
@@ -63,13 +64,15 @@ export function OverviewTab({ service: s, onNavigate }: { service: ServiceDetail
       </div>
 
       <div className="flex min-w-0 flex-col gap-4">
-        <Panel title="Coverage" actions={<LinkButton onClick={() => onNavigate("coverage")}>Details</LinkButton>}>
-          <p className="mb-2 text-3xl font-light tabular-nums">
-            {total ? Math.round((s.coverage.supported / total) * 100) : 0}%
-            <span className="ml-2 text-sm text-aws-muted">verified supported</span>
-          </p>
-          <CoverageBar coverage={s.coverage} />
-        </Panel>
+        {isFloci && (
+          <Panel title="Coverage" actions={<LinkButton onClick={() => onNavigate("coverage")}>Details</LinkButton>}>
+            <p className="mb-2 text-3xl font-light tabular-nums">
+              {total ? Math.round((s.coverage.supported / total) * 100) : 0}%
+              <span className="ml-2 text-sm text-aws-muted">verified supported</span>
+            </p>
+            <CoverageBar coverage={s.coverage} />
+          </Panel>
+        )}
 
         <Panel title="Recent activity" actions={<LinkButton onClick={() => onNavigate("activity")}>View all</LinkButton>}>
           {logs.isPending ? (

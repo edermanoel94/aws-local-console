@@ -3,10 +3,21 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient, type UseQueryOptions } from "@tanstack/react-query";
 import { executeOrThrow } from "@/lib/api";
 import { useRegion } from "@/hooks/use-region";
+import { useTarget } from "@/hooks/use-queries";
 import { toast } from "@/stores/toast";
 
-/** Floci's fixed account id (CONTRACT section 1). */
-export const ACCOUNT_ID = "000000000000";
+/**
+ * Account id of the target, for ARNs the APIs do not return: 000000000000 on Floci (CONTRACT section 1),
+ * the account of the Go API credentials on AWS. Empty until the target answers.
+ */
+export function useAccountId() {
+  return useTarget().accountId;
+}
+
+/** Account id for example values in placeholders: the real one when known. */
+export function usePlaceholderAccountId() {
+  return useAccountId() || "123456789012";
+}
 
 /** Root query key of every service console query; mutations invalidate it as a whole. */
 export const CONSOLE_KEY = "console";
@@ -117,8 +128,21 @@ export function queueNameFromUrl(url: string): string {
   return url.split("/").pop() ?? url;
 }
 
-export function sqsArn(region: string, name: string) {
-  return `arn:aws:sqs:${region}:${ACCOUNT_ID}:${name}`;
+/**
+ * Lets a service (API Gateway, EventBridge) invoke a Lambda function.
+ * Floci does not enforce resource-based policies, so a failure there is ignored;
+ * on AWS the integration cannot work without the permission, so the error is raised.
+ */
+export async function grantLambdaInvoke(
+  exec: Exec,
+  required: boolean,
+  input: { FunctionName: string; StatementId: string; Principal: string; SourceArn: string },
+) {
+  try {
+    await exec("lambda", "AddPermission", { ...input, Action: "lambda:InvokeFunction" });
+  } catch (err) {
+    if (required) throw err;
+  }
 }
 
 /** Sleeps for `ms` milliseconds (used for short polling of asynchronous results such as logs). */

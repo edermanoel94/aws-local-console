@@ -1,5 +1,6 @@
 // Package cli emulates a subset of the AWS CLI on top of the operation engine,
-// so every command is executed against Floci and audited with source "cli".
+// so every command is executed against the target (Floci or AWS) and audited
+// with source "cli".
 package cli
 
 import (
@@ -10,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/edermanoel94/aws-local-console/backend/internal/audit"
+	"github.com/edermanoel94/aws-local-console/backend/internal/environments"
 	"github.com/edermanoel94/aws-local-console/backend/internal/operations"
 	"github.com/edermanoel94/aws-local-console/backend/internal/services"
 )
@@ -33,14 +35,15 @@ type Result struct {
 
 // Runner executes CLI command lines.
 type Runner struct {
+	target   environments.Target
 	engine   *operations.Engine
 	registry *services.Registry
 	region   string
 }
 
-// NewRunner returns a runner; region is the default when none is given.
-func NewRunner(engine *operations.Engine, registry *services.Registry, defaultRegion string) *Runner {
-	return &Runner{engine: engine, registry: registry, region: defaultRegion}
+// NewRunner returns a runner; defaultRegion is used when a command names none.
+func NewRunner(target environments.Target, engine *operations.Engine, registry *services.Registry, defaultRegion string) *Runner {
+	return &Runner{target: target, engine: engine, registry: registry, region: defaultRegion}
 }
 
 var serviceAliases = map[string]string{
@@ -115,7 +118,7 @@ func (s *session) dispatch(command string) {
 				return
 			}
 		case "endpoint-url", "profile", "no-cli-pager", "debug", "no-verify-ssl", "no-paginate", "no-sign-request":
-			// Accepted for compatibility; the console always talks to Floci.
+			// Accepted for compatibility; the console always talks to its target with its own credentials.
 		default:
 			remaining = append(remaining, f)
 		}
@@ -293,8 +296,8 @@ func parseValue(raw string, field operations.InputField) any {
 
 func (s *session) help() string {
 	var b strings.Builder
-	b.WriteString(`AWS Local Console CLI - commands run against Floci through the Go API.
-
+	b.WriteString("AWS Local Console CLI - commands run against " + s.runner.target.DisplayName() + " through the Go API.\n")
+	b.WriteString(`
 Usage:
   aws s3 ls                          list buckets
   aws s3 ls s3://bucket[/prefix]     list objects (add --recursive for all keys)
