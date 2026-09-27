@@ -50,7 +50,9 @@ RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
 FROM web-base AS web-build
 COPY --from=web-deps /app/node_modules ./node_modules
 COPY frontend/ ./
-RUN corepack install && pnpm build
+# public/ holds optional static assets; git does not track an empty directory, so make sure it
+# exists for the runtime COPY below even when there are no assets.
+RUN mkdir -p public && corepack install && pnpm build
 
 # No RUN here: nothing executes on the target platform.
 FROM node:${NODE_VERSION}-alpine AS runtime
