@@ -1,8 +1,12 @@
-name: Release
+name: Publish
 
-# Pushing a tag like v1.2.3 runs the full E2E suite and, only if it passes, publishes the
-# multi-arch (linux/amd64, linux/arm64) image with the Go API and the web console to Docker Hub:
-#   edercosta/aws-local-console:{1.2.3,1.2,latest}
+# Runs the full E2E suite and, only if it passes, publishes the multi-arch
+# (linux/amd64, linux/arm64) image with the Go API and the web console to Docker Hub:
+#
+#   push to main       -> edercosta/aws-local-console:edge
+#   push of tag v1.2.3 -> edercosta/aws-local-console:{1.2.3,1.2,latest}
+#
+# `latest` only moves on version tags, so it always points at a release.
 #
 # Repository secrets required:
 #   DOCKERHUB_USERNAME  Docker Hub user (edercosta)
@@ -10,11 +14,14 @@ name: Release
 
 on:
   push:
+    branches: [main]
     tags: ["v*.*.*"]
 
+# One run per ref. On main a newer push cancels the older run, so `edge` can never
+# be overwritten by an older commit; version tags always run to completion.
 concurrency:
-  group: release-${{ github.ref }}
-  cancel-in-progress: false
+  group: publish-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref_type == 'branch' }}
 
 permissions:
   contents: read
@@ -52,11 +59,14 @@ jobs:
         uses: docker/metadata-action@v6
         with:
           images: ${{ env.IMAGE }}
+          # latest is set explicitly (tags only) instead of relying on flavor defaults.
+          flavor: |
+            latest=false
           tags: |
+            type=edge,branch=main
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
-          flavor: |
-            latest=auto
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
           labels: |
             org.opencontainers.image.title=AWS Local Console
             org.opencontainers.image.licenses=MIT
@@ -75,3 +85,13 @@ jobs:
           sbom: true
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Summary
+        env:
+          TAGS: ${{ steps.meta.outputs.tags }}
+        run: |
+          {
+            echo "### Published ${IMAGE}"
+            echo
+            while IFS= read -r tag; do printf -- '- %s\n' "$tag"; done <<< "$TAGS"
+          } >> "$GITHUB_STEP_SUMMARY"

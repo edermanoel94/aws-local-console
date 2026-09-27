@@ -119,7 +119,7 @@ dev-backend: ## Run the Go API on the host against Floci (go run)
 dev-frontend: ## Run the Next.js dev server on the host
 	cd frontend && API_INTERNAL_URL=http://localhost:$(DEV_API_PORT) PORT=$(WEB_PORT) $(PNPM) dev
 
-# Publishes the multi-arch image from this machine (CI does the same in .github/workflows/release.yml).
+# Publishes the multi-arch image from this machine (CI does the same in .github/workflows/publish.yml).
 # Each platform is built with the default builder (no emulation, see the Dockerfile, and no extra
 # buildkit volume), pushed as <version>-<arch>, then joined into one multi-arch <version> and latest.
 # Requires `docker login` as $(IMAGE_NAMESPACE).

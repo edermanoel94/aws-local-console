@@ -1,11 +1,10 @@
 name: E2E
 
+# Pull requests run the suite here; pushes to main and version tags run it through
+# publish.yml, which only publishes images after this suite passes.
 on:
-  push:
-    branches: [main]
   pull_request:
   workflow_dispatch:
-  # Reused by release.yml: images are only published after this suite passes.
   workflow_call:
 
 concurrency:

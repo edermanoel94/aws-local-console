@@ -206,12 +206,26 @@ Lambda containers are labelled `floci=true`, and `make down` and `make clean` re
 
 ## Releasing
 
-The image is published to Docker Hub as `edercosta/aws-local-console`, for linux/amd64 and linux/arm64, with the tags `<version>`, `<major>.<minor>` and `latest`.
+The image is published to Docker Hub as `edercosta/aws-local-console`, for linux/amd64 and linux/arm64.
 The Dockerfile cross-builds on the build machine's native platform, so no emulation (QEMU) is needed for arm64.
 
-From CI (preferred): push a tag such as `v1.2.3`.
-[`.github/workflows/release.yml`](.github/workflows/release.yml) runs the full E2E suite and only then builds and pushes the image, with SBOM and provenance attestations.
-It needs the repository secrets `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` (a Docker Hub access token, not the password).
+[`.github/workflows/publish.yml`](.github/workflows/publish.yml) runs the full E2E suite and only then builds and pushes the image, with SBOM and provenance attestations:
+
+| Event | Tags published |
+|---|---|
+| Push to `main` | `edge` |
+| Push of a tag `v1.2.3` | `1.2.3`, `1.2`, `latest` |
+| Pull request | none (E2E only, [`.github/workflows/e2e.yml`](.github/workflows/e2e.yml)) |
+
+`latest` only moves on version tags, so it always points at a release; `edge` follows `main`.
+Cutting a release from CI is just:
+
+```bash
+git tag v1.2.3
+git push origin v1.2.3
+```
+
+The workflow needs the repository secrets `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` (a Docker Hub access token, not the password).
 
 From a workstation: after `docker login`, tag the release commit and run `make release`.
 

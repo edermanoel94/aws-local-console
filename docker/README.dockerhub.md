@@ -104,7 +104,9 @@ If the API process stops, the container exits, so the restart policy brings it b
 ## Tags and platforms
 
 - `latest`: the most recent release.
-- `<major>.<minor>.<patch>` (e.g. `0.1.0`): a specific release; pin this for reproducible setups.
+- `<major>.<minor>.<patch>` (e.g. `0.1.3`): a specific release; pin this for reproducible setups.
+- `<major>.<minor>` (e.g. `0.1`): the latest patch of that minor version.
+- `edge`: the current `main` branch, published after every successful E2E run; may change at any time.
 - Every tag is multi-arch: `linux/amd64` and `linux/arm64` (Apple Silicon, ARM servers).
 
 ## License
