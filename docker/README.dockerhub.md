@@ -19,14 +19,9 @@ Save this as `compose.yaml` and run `docker compose up -d --wait`, then open htt
 
 ```yaml
 # Optional settings (environment variables or an .env file next to this file):
-#   AWS_LOCAL_CONSOLE_VERSION  console image tag (default: latest), e.g. 1.2.3
-#   FLOCI_VERSION              Floci image tag (default: 2.1.0, the version the console is tested with)
-#   AWS_REGION                 default region of Floci and of the console (default: us-east-1)
-#   FLOCI_STORAGE_MODE         memory (default, state is lost on restart), persistent or hybrid;
-#                              persistent state lives in the floci-data volume
-#   FLOCI_ENDPOINT             Floci URL used by the console (default: the floci service)
-#   WEB_PORT (3000), FLOCI_PORT (4566)  host ports
-# Any other Floci setting can be added under floci.environment (FLOCI_* variables).
+#   FLOCI_STORAGE_MODE  memory (default, state is lost on restart), persistent or hybrid;
+#                       persistent state lives in the floci-data volume
+#   FLOCI_ENDPOINT      Floci URL used by the console (default: the floci service)
 #
 # edercosta/aws-local-console is a single image with the Go API and the web
 # console; the browser calls /api/v1 on the web port, which the web server
@@ -38,12 +33,11 @@ name: aws-local-console
 
 services:
   floci:
-    image: floci/floci:${FLOCI_VERSION:-2.1.0}
+    image: floci/floci:2.1.0
     restart: unless-stopped
     ports:
-      - "${FLOCI_PORT:-4566}:4566"
+      - "4566:4566"
     environment:
-      FLOCI_DEFAULT_REGION: ${AWS_REGION:-us-east-1}
       FLOCI_STORAGE_MODE: ${FLOCI_STORAGE_MODE:-memory}
       # Fixed: Lambda containers must join this compose network to reach Floci.
       FLOCI_SERVICES_LAMBDA_DOCKER_NETWORK: aws-local-console
@@ -58,14 +52,13 @@ services:
       retries: 40
 
   console:
-    image: edercosta/aws-local-console:${AWS_LOCAL_CONSOLE_VERSION:-latest}
+    image: edercosta/aws-local-console:latest
     # The container exits if its API process dies; come back automatically.
     restart: unless-stopped
     ports:
-      - "${WEB_PORT:-3000}:3000"
+      - "3000:3000"
     environment:
       FLOCI_ENDPOINT: ${FLOCI_ENDPOINT:-http://floci:4566}
-      AWS_REGION: ${AWS_REGION:-us-east-1}
     depends_on:
       floci:
         condition: service_healthy
@@ -89,33 +82,16 @@ docker run -d -p 3000:3000 \
 
 ## Configuration
 
-Set these in the shell or in an `.env` file next to `compose.yaml`, e.g. `AWS_REGION=sa-east-1 FLOCI_STORAGE_MODE=persistent docker compose up -d --wait`.
+Set these in the shell or in an `.env` file next to `compose.yaml`, e.g. `FLOCI_STORAGE_MODE=persistent docker compose up -d --wait`.
 
 | Variable | Default | Description |
 |---|---|---|
-| `AWS_LOCAL_CONSOLE_VERSION` | `latest` | Console image tag, e.g. `0.1.0` |
-| `FLOCI_VERSION` | `2.1.0` | Floci image tag (the version the console is tested with) |
-| `AWS_REGION` | `us-east-1` | Default region of Floci and of the console (the region selector starts there) |
-| `FLOCI_STORAGE_MODE` | `memory` | `memory` loses all resources on restart; `persistent` (or `hybrid`) keeps them in the `floci-data` volume |
+| `FLOCI_STORAGE_MODE` | `memory` | `memory` loses all resources on restart; `persistent` (or `hybrid`) keeps them in the `floci-data` volume (remove it with `docker compose down -v`) |
 | `FLOCI_ENDPOINT` | `http://floci:4566` | Floci URL used by the console, e.g. to point it at another Floci |
-| `WEB_PORT` / `FLOCI_PORT` | `3000` / `4566` | Host ports |
 
-Any other [Floci setting](https://hub.docker.com/r/floci/floci) can be added under `floci.environment` as a `FLOCI_*` variable (for example `FLOCI_SERVICES_LAMBDA_EPHEMERAL=true`).
-Remove persisted resources with `docker compose down -v`.
-
-Environment of the console image itself (already set by the compose file above):
-
-| Variable | Default | Description |
-|---|---|---|
-| `FLOCI_ENDPOINT` | `http://floci:4566` | Floci endpoint as seen from the container |
-| `AWS_REGION` | `us-east-1` | Default region |
-| `PORT` | `3000` | Port of the web console (the one to publish) |
-| `API_PORT` | `8080` | Internal port of the Go API inside the container (not published) |
-| `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | `test` / `test` | Credentials sent to Floci |
-
-The console assumes Floci's default account id `000000000000`.
+The console assumes Floci's defaults: region `us-east-1` and account id `000000000000`.
 The container runs as the unprivileged `node` user and has a healthcheck that is healthy only when both the web server and the API answer.
-If the API process stops, the container exits, so a restart policy brings it back.
+If the API process stops, the container exits, so the restart policy brings it back.
 
 ## Tags and platforms
 

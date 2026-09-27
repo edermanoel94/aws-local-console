@@ -21,14 +21,9 @@ Settings (shell variables or an `.env` file next to the compose file):
 
 | Variable | Default | Description |
 |---|---|---|
-| `AWS_LOCAL_CONSOLE_VERSION` | `latest` | Console image tag, e.g. `1.2.3` |
-| `FLOCI_VERSION` | `2.1.0` | Floci image tag (the version the console is tested with) |
-| `AWS_REGION` | `us-east-1` | Default region of Floci and of the console (the region selector starts there) |
 | `FLOCI_STORAGE_MODE` | `memory` | `memory` loses all resources on restart; `persistent` (or `hybrid`) keeps them in the `floci-data` volume |
 | `FLOCI_ENDPOINT` | `http://floci:4566` | Floci URL used by the console |
-| `WEB_PORT` / `FLOCI_PORT` | `3000` / `4566` | Host ports |
 
-Any other Floci setting can be added under `floci.environment` as a `FLOCI_*` variable.
 The Docker Hub page text lives in [`docker/README.dockerhub.md`](docker/README.dockerhub.md).
 
 ## Architecture

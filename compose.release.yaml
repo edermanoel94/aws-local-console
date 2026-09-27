@@ -4,14 +4,9 @@
 #   open http://localhost:3000
 #
 # Optional settings (environment variables or an .env file next to this file):
-#   AWS_LOCAL_CONSOLE_VERSION  console image tag (default: latest), e.g. 1.2.3
-#   FLOCI_VERSION              Floci image tag (default: 2.1.0, the version the console is tested with)
-#   AWS_REGION                 default region of Floci and of the console (default: us-east-1)
-#   FLOCI_STORAGE_MODE         memory (default, state is lost on restart), persistent or hybrid;
-#                              persistent state lives in the floci-data volume
-#   FLOCI_ENDPOINT             Floci URL used by the console (default: the floci service)
-#   WEB_PORT (3000), FLOCI_PORT (4566)  host ports
-# Any other Floci setting can be added under floci.environment (FLOCI_* variables).
+#   FLOCI_STORAGE_MODE  memory (default, state is lost on restart), persistent or hybrid;
+#                       persistent state lives in the floci-data volume
+#   FLOCI_ENDPOINT      Floci URL used by the console (default: the floci service)
 #
 # edercosta/aws-local-console is a single image with the Go API and the web
 # console; the browser calls /api/v1 on the web port, which the web server
@@ -23,12 +18,11 @@ name: aws-local-console
 
 services:
   floci:
-    image: floci/floci:${FLOCI_VERSION:-2.1.0}
+    image: floci/floci:2.1.0
     restart: unless-stopped
     ports:
-      - "${FLOCI_PORT:-4566}:4566"
+      - "4566:4566"
     environment:
-      FLOCI_DEFAULT_REGION: ${AWS_REGION:-us-east-1}
       FLOCI_STORAGE_MODE: ${FLOCI_STORAGE_MODE:-memory}
       # Fixed: Lambda containers must join this compose network to reach Floci.
       FLOCI_SERVICES_LAMBDA_DOCKER_NETWORK: aws-local-console
@@ -43,14 +37,13 @@ services:
       retries: 40
 
   console:
-    image: edercosta/aws-local-console:${AWS_LOCAL_CONSOLE_VERSION:-latest}
+    image: edercosta/aws-local-console:latest
     # The container exits if its API process dies; come back automatically.
     restart: unless-stopped
     ports:
-      - "${WEB_PORT:-3000}:3000"
+      - "3000:3000"
     environment:
       FLOCI_ENDPOINT: ${FLOCI_ENDPOINT:-http://floci:4566}
-      AWS_REGION: ${AWS_REGION:-us-east-1}
     depends_on:
       floci:
         condition: service_healthy
