@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/edermanoel/aws-dash-local/backend/internal/services"
+	"github.com/edermanoel94/aws-local-console/backend/internal/services"
 )
 
 // GlobalRegion is the region of resources of global services (IAM).

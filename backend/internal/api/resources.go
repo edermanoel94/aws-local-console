@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"sort"
 
-	"github.com/edermanoel/aws-dash-local/backend/internal/audit"
-	"github.com/edermanoel/aws-dash-local/backend/internal/resources"
+	"github.com/edermanoel94/aws-local-console/backend/internal/audit"
+	"github.com/edermanoel94/aws-local-console/backend/internal/resources"
 )
 
 func (s *Server) listResources(w http.ResponseWriter, r *http.Request) {

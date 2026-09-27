@@ -3,9 +3,9 @@ package api
 import (
 	"net/http"
 
-	"github.com/edermanoel/aws-dash-local/backend/internal/coverage"
-	"github.com/edermanoel/aws-dash-local/backend/internal/operations"
-	"github.com/edermanoel/aws-dash-local/backend/internal/services"
+	"github.com/edermanoel94/aws-local-console/backend/internal/coverage"
+	"github.com/edermanoel94/aws-local-console/backend/internal/operations"
+	"github.com/edermanoel94/aws-local-console/backend/internal/services"
 )
 
 type serviceSummary struct {

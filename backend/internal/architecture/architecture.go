@@ -19,9 +19,9 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/lambda"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
-	"github.com/edermanoel/aws-dash-local/backend/internal/audit"
-	"github.com/edermanoel/aws-dash-local/backend/internal/resources"
-	"github.com/edermanoel/aws-dash-local/backend/internal/services"
+	"github.com/edermanoel94/aws-local-console/backend/internal/audit"
+	"github.com/edermanoel94/aws-local-console/backend/internal/resources"
+	"github.com/edermanoel94/aws-local-console/backend/internal/services"
 )
 
 // Edge labels.

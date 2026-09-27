@@ -1,4 +1,4 @@
-module github.com/edermanoel/aws-dash-local/backend
+module github.com/edermanoel94/aws-local-console/backend
 
 go 1.27.1
 

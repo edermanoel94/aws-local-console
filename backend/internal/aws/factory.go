@@ -11,7 +11,7 @@ import (
 	sdkaws "github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 
-	"github.com/edermanoel/aws-dash-local/backend/internal/environments"
+	"github.com/edermanoel94/aws-local-console/backend/internal/environments"
 )
 
 // ClientBuilder builds one SDK client (e.g. s3.NewFromConfig) from a config.

@@ -10,12 +10,20 @@ No AWS account needed: everything runs on your machine.
 - **Logs and Events**: an audit trail of every operation, with a request inspector.
 - **CLI** in the browser: `aws s3 ls`, `aws sqs list-queues`, `aws <service> <operation> --flags`.
 
+Source code, issues and releases: https://github.com/edermanoel94/aws-local-console
+
 This single image contains the Go API and the Next.js web console.
 Only port `3000` is exposed; the browser reaches the API through the web server's `/api/v1` proxy, so the console works from any host name or device.
 
 ## Quick start
 
-Save this as `compose.yaml` and run `docker compose up -d --wait`, then open http://localhost:3000.
+```bash
+curl -fsSL https://raw.githubusercontent.com/edermanoel94/aws-local-console/main/compose.release.yaml -o compose.yaml
+docker compose up -d --wait
+```
+
+Then open http://localhost:3000.
+The file is shown below, if you prefer to create it yourself.
 
 ```yaml
 # Optional settings (environment variables or an .env file next to this file):

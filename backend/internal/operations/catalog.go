@@ -15,7 +15,7 @@ import (
 	"github.com/aws/smithy-go"
 	"github.com/aws/smithy-go/middleware"
 
-	"github.com/edermanoel/aws-dash-local/backend/internal/services"
+	"github.com/edermanoel94/aws-local-console/backend/internal/services"
 )
 
 var (

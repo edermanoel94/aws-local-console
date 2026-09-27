@@ -11,10 +11,10 @@ import (
 	awsmiddleware "github.com/aws/aws-sdk-go-v2/aws/middleware"
 	"github.com/aws/smithy-go/middleware"
 
-	"github.com/edermanoel/aws-dash-local/backend/internal/audit"
-	awsfloci "github.com/edermanoel/aws-dash-local/backend/internal/aws"
-	"github.com/edermanoel/aws-dash-local/backend/internal/coverage"
-	"github.com/edermanoel/aws-dash-local/backend/internal/services"
+	"github.com/edermanoel94/aws-local-console/backend/internal/audit"
+	awsfloci "github.com/edermanoel94/aws-local-console/backend/internal/aws"
+	"github.com/edermanoel94/aws-local-console/backend/internal/coverage"
+	"github.com/edermanoel94/aws-local-console/backend/internal/services"
 )
 
 // callTimeout bounds one AWS call. Lambda invocations on Floci may pull a

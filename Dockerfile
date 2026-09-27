@@ -30,7 +30,7 @@ COPY backend/ ./
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
     GOOS=$TARGETOS GOARCH=$TARGETARCH go build -tags timetzdata \
-      -ldflags="-s -w -X github.com/edermanoel/aws-dash-local/backend/internal/api.Version=${VERSION}" \
+      -ldflags="-s -w -X github.com/edermanoel94/aws-local-console/backend/internal/api.Version=${VERSION}" \
       -o /out/api ./cmd/api
 
 FROM --platform=$BUILDPLATFORM node:${NODE_VERSION}-alpine AS web-base
@@ -58,6 +58,7 @@ ARG VERSION
 LABEL org.opencontainers.image.title="AWS Local Console" \
       org.opencontainers.image.description="Web console to explore and operate AWS services running on Floci (Go API + Next.js)" \
       org.opencontainers.image.licenses="MIT" \
+      org.opencontainers.image.source="https://github.com/edermanoel94/aws-local-console" \
       org.opencontainers.image.version="${VERSION}"
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \

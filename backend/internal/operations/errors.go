@@ -12,8 +12,8 @@ import (
 	"github.com/aws/smithy-go"
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 
-	"github.com/edermanoel/aws-dash-local/backend/internal/audit"
-	awsfloci "github.com/edermanoel/aws-dash-local/backend/internal/aws"
+	"github.com/edermanoel94/aws-local-console/backend/internal/audit"
+	awsfloci "github.com/edermanoel94/aws-local-console/backend/internal/aws"
 )
 
 // How Floci answers operations it does not implement (probed against Floci

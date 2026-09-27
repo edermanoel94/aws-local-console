@@ -11,6 +11,7 @@ No checkout or build needed: download [`compose.release.yaml`](compose.release.y
 It runs Floci plus the published [`edercosta/aws-local-console`](https://hub.docker.com/r/edercosta/aws-local-console) image, a single image with the Go API and the web console (linux/amd64 and linux/arm64).
 
 ```bash
+curl -fsSLO https://raw.githubusercontent.com/edermanoel94/aws-local-console/main/compose.release.yaml
 docker compose -f compose.release.yaml up -d --wait
 ```
 

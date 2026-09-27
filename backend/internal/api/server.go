@@ -11,19 +11,19 @@ import (
 	"strings"
 	"time"
 
-	"github.com/edermanoel/aws-dash-local/backend/internal/architecture"
-	"github.com/edermanoel/aws-dash-local/backend/internal/audit"
-	awsfloci "github.com/edermanoel/aws-dash-local/backend/internal/aws"
-	"github.com/edermanoel/aws-dash-local/backend/internal/cli"
-	"github.com/edermanoel/aws-dash-local/backend/internal/coverage"
-	"github.com/edermanoel/aws-dash-local/backend/internal/environments"
-	"github.com/edermanoel/aws-dash-local/backend/internal/operations"
-	"github.com/edermanoel/aws-dash-local/backend/internal/resources"
-	"github.com/edermanoel/aws-dash-local/backend/internal/services"
+	"github.com/edermanoel94/aws-local-console/backend/internal/architecture"
+	"github.com/edermanoel94/aws-local-console/backend/internal/audit"
+	awsfloci "github.com/edermanoel94/aws-local-console/backend/internal/aws"
+	"github.com/edermanoel94/aws-local-console/backend/internal/cli"
+	"github.com/edermanoel94/aws-local-console/backend/internal/coverage"
+	"github.com/edermanoel94/aws-local-console/backend/internal/environments"
+	"github.com/edermanoel94/aws-local-console/backend/internal/operations"
+	"github.com/edermanoel94/aws-local-console/backend/internal/resources"
+	"github.com/edermanoel94/aws-local-console/backend/internal/services"
 )
 
 // Version is the API version reported by /health. Release builds set it with
-// -ldflags "-X github.com/edermanoel/aws-dash-local/backend/internal/api.Version=<version>".
+// -ldflags "-X github.com/edermanoel94/aws-local-console/backend/internal/api.Version=<version>".
 var Version = "dev"
 
 // Dependencies are the components the HTTP layer uses.

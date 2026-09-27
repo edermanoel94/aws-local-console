@@ -18,7 +18,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/sns"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 
-	awsfloci "github.com/edermanoel/aws-dash-local/backend/internal/aws"
+	awsfloci "github.com/edermanoel94/aws-local-console/backend/internal/aws"
 )
 
 // Category groups services in the UI.

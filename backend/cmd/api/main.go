@@ -11,16 +11,16 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/edermanoel/aws-dash-local/backend/internal/api"
-	"github.com/edermanoel/aws-dash-local/backend/internal/architecture"
-	"github.com/edermanoel/aws-dash-local/backend/internal/audit"
-	awsfloci "github.com/edermanoel/aws-dash-local/backend/internal/aws"
-	"github.com/edermanoel/aws-dash-local/backend/internal/cli"
-	"github.com/edermanoel/aws-dash-local/backend/internal/coverage"
-	"github.com/edermanoel/aws-dash-local/backend/internal/environments"
-	"github.com/edermanoel/aws-dash-local/backend/internal/operations"
-	"github.com/edermanoel/aws-dash-local/backend/internal/resources"
-	"github.com/edermanoel/aws-dash-local/backend/internal/services"
+	"github.com/edermanoel94/aws-local-console/backend/internal/api"
+	"github.com/edermanoel94/aws-local-console/backend/internal/architecture"
+	"github.com/edermanoel94/aws-local-console/backend/internal/audit"
+	awsfloci "github.com/edermanoel94/aws-local-console/backend/internal/aws"
+	"github.com/edermanoel94/aws-local-console/backend/internal/cli"
+	"github.com/edermanoel94/aws-local-console/backend/internal/coverage"
+	"github.com/edermanoel94/aws-local-console/backend/internal/environments"
+	"github.com/edermanoel94/aws-local-console/backend/internal/operations"
+	"github.com/edermanoel94/aws-local-console/backend/internal/resources"
+	"github.com/edermanoel94/aws-local-console/backend/internal/services"
 )
 
 const auditCapacity = 2000
