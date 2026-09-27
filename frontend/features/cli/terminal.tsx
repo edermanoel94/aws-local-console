@@ -47,12 +47,19 @@ function loadHistory(): string[] {
  * Line editing (arrows, Home/End, Backspace/Delete, Ctrl+A/E/U/C/L), persisted history (Up/Down), `clear`.
  * Every command and its output is also reported through onTranscript for the accessible log mirror.
  */
+/** Splits terminal input into keys: escape sequences (arrows, Home, Delete, ...) stay whole, anything else is one character. */
+function splitKeys(data: string): string[] {
+  return data.match(/\x1b\[[0-9;]*[A-Za-z~]|\x1bO[A-Za-z]|[\s\S]/g) ?? [];
+}
+
 export default function CliTerminal({ handleRef, onTranscript, onClearTranscript, onBusyChange }: CliTerminalProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<Terminal | null>(null);
   const lineRef = useRef({ text: "", cursor: 0 });
   const historyRef = useRef<{ items: string[]; index: number; draft: string }>({ items: [], index: 0, draft: "" });
   const busyRef = useRef(false);
+  /** Input typed while a command runs (typeahead), replayed once it finishes, like a real shell. */
+  const typeaheadRef = useRef("");
   const callbacks = useRef({ onTranscript, onClearTranscript, onBusyChange });
 
   useEffect(() => {
@@ -199,6 +206,7 @@ export default function CliTerminal({ handleRef, onTranscript, onClearTranscript
         callbacks.current.onBusyChange(false);
         lineRef.current = { text: "", cursor: 0 };
         redraw();
+        replayTypeahead();
       }
     };
 
@@ -210,11 +218,35 @@ export default function CliTerminal({ handleRef, onTranscript, onClearTranscript
       setLine(h.index === h.items.length ? h.draft : h.items[h.index]);
     };
 
-    const disposable = term.onData((data) => {
-      if (busyRef.current) {
-        if (data === "\x03") term.write("^C");
+    /** Input typed while a command runs is kept (typeahead) instead of being dropped. */
+    const handleInput = (data: string) => {
+      if (!busyRef.current) {
+        handleKey(data);
         return;
       }
+      // Ctrl+C drops the typeahead; the running request itself can't be cancelled.
+      if (data.includes("\x03")) {
+        typeaheadRef.current = "";
+        term.write("^C");
+      } else {
+        typeaheadRef.current += data;
+      }
+    };
+
+    /** Replays the typeahead key by key: an Enter in it runs a command, and the keys after it wait for that command. */
+    const replayTypeahead = () => {
+      const keys = splitKeys(typeaheadRef.current);
+      typeaheadRef.current = "";
+      for (let i = 0; i < keys.length; i++) {
+        if (busyRef.current) {
+          typeaheadRef.current = keys.slice(i).join("") + typeaheadRef.current;
+          return;
+        }
+        handleKey(keys[i]);
+      }
+    };
+
+    const handleKey = (data: string) => {
       const { text, cursor } = lineRef.current;
       switch (data) {
         case "\r":
@@ -271,7 +303,9 @@ export default function CliTerminal({ handleRef, onTranscript, onClearTranscript
         lineRef.current = { text: "", cursor: 0 };
         void run(full);
       }
-    });
+    };
+
+    const disposable = term.onData(handleInput);
 
     const observer = new ResizeObserver(() => {
       try {

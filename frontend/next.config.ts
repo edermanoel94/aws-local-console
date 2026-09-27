@@ -12,6 +12,9 @@ const nextConfig: NextConfig = {
   outputFileTracingExcludes: { "/*": NATIVE_IMAGE_LIBS, "*": NATIVE_IMAGE_LIBS },
   // The floating dev indicator overlaps the sidebar footer; compile/runtime errors still show in the overlay.
   devIndicators: false,
+  // `next dev` blocks its dev resources (HMR, chunks) for origins other than localhost; the console must also work
+  // when opened as 127.0.0.1 (the E2E suite checks it). Production builds are not affected by this setting.
+  allowedDevOrigins: ["127.0.0.1"],
 };
 
 export default nextConfig;

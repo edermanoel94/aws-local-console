@@ -22,12 +22,13 @@ test.describe("CLI", () => {
     await page.keyboard.type(`aws s3 mb s3://${bucket}`);
     await page.keyboard.press("Enter");
     await expect(output).toContainText(`$ aws s3 mb s3://${bucket}`);
-    await expect(output).toContainText(bucket);
+    // The echoed command already contains the bucket name: wait for the command's own output.
+    await expect(output).toContainText(`make_bucket: ${bucket}`);
 
     await page.keyboard.type("aws s3 ls");
     await page.keyboard.press("Enter");
-    await expect(output.locator("pre", { hasText: bucket }).last()).toBeVisible();
     await expect(output).toContainText("$ aws s3 ls");
+    await expect(output.locator("pre").filter({ hasText: new RegExp(`\\d{2}:\\d{2}:\\d{2} ${bucket}`) })).toBeVisible();
 
     // History: Up recalls the previous command.
     await page.keyboard.press("ArrowUp");
@@ -38,6 +39,14 @@ test.describe("CLI", () => {
     await page.keyboard.type("aws sqs get-queue-url --queue-name does-not-exist-e2e");
     await page.keyboard.press("Enter");
     await expect(output).toContainText(/exit code \d+/);
+
+    // Keys typed while a command runs are kept and run afterwards (typeahead), like in a real shell.
+    await page.keyboard.type("aws s3 ls");
+    await page.keyboard.press("Enter");
+    await page.keyboard.type("history");
+    await page.keyboard.press("Enter");
+    await expect(output.getByText("$ history", { exact: true })).toBeVisible();
+    await expect(output.getByText("$ aws s3 ls", { exact: true })).toHaveCount(3);
 
     await page.keyboard.type("clear");
     await page.keyboard.press("Enter");
