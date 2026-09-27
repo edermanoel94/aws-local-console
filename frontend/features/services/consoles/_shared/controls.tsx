@@ -1,6 +1,6 @@
 "use client";
 
-import { forwardRef, useId, useRef, useState, type InputHTMLAttributes, type KeyboardEvent, type ReactNode } from "react";
+import { Fragment, forwardRef, useId, useRef, useState, type InputHTMLAttributes, type KeyboardEvent, type ReactNode } from "react";
 import { Check, Copy, Plus, X } from "lucide-react";
 import { Button, Dialog, ErrorAlert, TextField } from "@/components/ui";
 import { cn } from "@/lib/cn";
@@ -258,10 +258,19 @@ export function CopyButton({ value, label }: { value: string; label: string }) {
 }
 
 /** Monospace value with a copy button (ARNs, URLs, ids). */
+/** ARNs and URLs wrap after ":" and "/" (never inside an account id); other long values wrap anywhere as a last resort. */
 export function CopyableText({ value, label }: { value: string; label: string }) {
+  const parts = value.split(/(?<=[:/])/);
   return (
     <span className="inline-flex max-w-full items-start gap-1">
-      <span className="min-w-0 font-mono text-xs leading-6 break-all">{value}</span>
+      <span className="min-w-0 font-mono text-xs leading-6 [overflow-wrap:anywhere]">
+        {parts.map((part, i) => (
+          <Fragment key={i}>
+            {part}
+            {i < parts.length - 1 && <wbr />}
+          </Fragment>
+        ))}
+      </span>
       <CopyButton value={value} label={label} />
     </span>
   );

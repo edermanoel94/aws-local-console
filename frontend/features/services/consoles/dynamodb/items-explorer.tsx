@@ -260,7 +260,8 @@ export function ItemsExplorer({ table }: { table: TableDescription }) {
                             {displayValue(item[c])}
                           </button>
                         ) : (
-                          <span className="line-clamp-2 max-w-xs font-mono text-xs leading-5 break-all">{item[c] ? displayValue(item[c]) : ""}</span>
+                          // break-words keeps short values ("DELIVERED", "1428.9") whole; only tokens wider than the cell are split.
+                          <span className="line-clamp-2 max-w-xs font-mono text-xs leading-5 break-words">{item[c] ? displayValue(item[c]) : ""}</span>
                         )}
                       </Td>
                     ))}
