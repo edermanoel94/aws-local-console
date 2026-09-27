@@ -1,13 +1,14 @@
 "use client";
 
 import { useDeferredValue, useId, useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { AlertTriangle, RefreshCw, Search } from "lucide-react";
 import { Button, Drawer, EmptyState, ErrorAlert, Loading, Panel, SelectField } from "@/components/ui";
 import { useRegions, useResources, useServices } from "@/hooks/use-queries";
 import { useRegion } from "@/hooks/use-region";
 import { ResourceTable } from "./resource-table";
 import { ResourceDetail } from "./resource-detail";
+import { useUpdateSearchParams } from "@/hooks/use-update-search-params";
 
 const INPUT =
   "h-[34px] w-full rounded-lg border border-aws-border-strong bg-white px-2.5 text-sm placeholder:text-aws-muted focus:border-aws-link focus:ring-1 focus:ring-aws-link focus:outline-none";
@@ -15,8 +16,6 @@ const INPUT =
 /** Cross-service resource search with service / region / tag filters and a detail drawer. */
 export function ResourceExplorer() {
   const searchParams = useSearchParams();
-  const router = useRouter();
-  const pathname = usePathname();
   const ids = useId();
   const globalRegion = useRegion();
 
@@ -36,13 +35,8 @@ export function ResourceExplorer() {
   const regions = useRegions();
   const selected = resources.data?.resources.find((r) => r.id === selectedId);
 
-  const setParam = (key: string, value: string | null) => {
-    const params = new URLSearchParams(searchParams.toString());
-    if (value) params.set(key, value);
-    else params.delete(key);
-    const qs = params.toString();
-    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
-  };
+  const updateSearchParams = useUpdateSearchParams();
+  const setParam = (key: string, value: string | null) => updateSearchParams({ [key]: value });
 
   const filtersActive = !!(q || service || tag || regionOverride);
   const regionOptions = [
@@ -129,7 +123,7 @@ export function ResourceExplorer() {
                 setService("");
                 setTag("");
                 setRegionOverride(null);
-                router.replace(pathname, { scroll: false });
+                updateSearchParams({ q: null, service: null, tag: null, region: null, id: null });
               }}
             >
               Clear filters

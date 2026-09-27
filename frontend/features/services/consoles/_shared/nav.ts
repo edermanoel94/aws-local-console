@@ -19,9 +19,11 @@ export type NavUpdate = Partial<Record<ConsoleParam, string | null>>;
 export function useConsoleNav() {
   const searchParams = useSearchParams();
 
+  // `base` defaults to the rendered URL (for link hrefs); navigate() passes the live URL instead,
+  // so quick successive navigations never build on a stale snapshot.
   const href = useCallback(
-    (update: NavUpdate, reset = true) => {
-      const params = new URLSearchParams(searchParams.toString());
+    (update: NavUpdate, reset = true, base: string = searchParams.toString()) => {
+      const params = new URLSearchParams(base);
       if (reset) for (const key of CONSOLE_PARAMS) if (!(key in update)) params.delete(key);
       for (const [key, value] of Object.entries(update)) {
         if (value === null || value === undefined || value === "") params.delete(key);
@@ -36,7 +38,7 @@ export function useConsoleNav() {
   /** Navigates inside the console. By default every console param not in `update` is cleared. */
   const navigate = useCallback(
     (update: NavUpdate, options?: { replace?: boolean; reset?: boolean }) => {
-      const url = href(update, options?.reset ?? true);
+      const url = href(update, options?.reset ?? true, window.location.search);
       if (options?.replace) window.history.replaceState(null, "", url);
       else window.history.pushState(null, "", url);
     },

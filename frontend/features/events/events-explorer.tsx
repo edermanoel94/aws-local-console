@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { useDeferredValue, useId, useMemo, useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { ArrowRight, FileText, RefreshCw, Search } from "lucide-react";
 import type { ResourceEvent } from "@/types/api";
 import { Badge, Button, Drawer, EmptyState, ErrorAlert, JsonView, Loading, Panel, SelectField, Table, Td, Th, Tr } from "@/components/ui";
 import { ServiceIcon, SERVICE_SHORT_NAMES } from "@/components/aws/service-icon";
 import { useEvents, useServices } from "@/hooks/use-queries";
 import { formatDateTime } from "@/lib/format";
+import { useUpdateSearchParams } from "@/hooks/use-update-search-params";
 
 const KNOWN_TYPES = ["ResourceCreated", "ResourceUpdated", "ResourceDeleted", "MessagePublished", "FunctionInvoked", "ObjectUploaded"];
 
@@ -22,8 +23,6 @@ function typeTone(type: string) {
 /** Resource lifecycle events with filters and a detail drawer (related resources + originating log). */
 export function EventsExplorer() {
   const searchParams = useSearchParams();
-  const router = useRouter();
-  const pathname = usePathname();
   const ids = useId();
   const [service, setService] = useState(searchParams.get("service") ?? "");
   const [type, setType] = useState(searchParams.get("type") ?? "");
@@ -36,13 +35,8 @@ export function EventsExplorer() {
   const services = useServices();
   const selected = events.data?.find((e) => e.id === selectedId);
 
-  const setParam = (key: string, value: string | null) => {
-    const params = new URLSearchParams(searchParams.toString());
-    if (value) params.set(key, value);
-    else params.delete(key);
-    const qs = params.toString();
-    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
-  };
+  const updateSearchParams = useUpdateSearchParams();
+  const setParam = (key: string, value: string | null) => updateSearchParams({ [key]: value });
 
   const typeOptions = useMemo(() => {
     const all = new Set([...KNOWN_TYPES, ...(events.data ?? []).map((e) => e.type)]);
@@ -119,7 +113,7 @@ export function EventsExplorer() {
                 setService("");
                 setType("");
                 setQ("");
-                router.replace(pathname, { scroll: false });
+                updateSearchParams({ service: null, type: null, q: null, id: null });
               }}
             >
               Clear filters

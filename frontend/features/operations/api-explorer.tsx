@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Play, RotateCcw } from "lucide-react";
 import type { ExecuteResponse, OperationInfo } from "@/types/api";
@@ -14,6 +14,7 @@ import { CoverageBadge } from "@/components/aws/status-badges";
 import { useRegions, useService, useServices } from "@/hooks/use-queries";
 import { useRegion } from "@/hooks/use-region";
 import { toKebabCase } from "@/lib/format";
+import { useUpdateSearchParams } from "@/hooks/use-update-search-params";
 
 interface ApiExplorerProps {
   /** Locks the explorer to one service (used by the service detail "API Explorer" tab). */
@@ -38,8 +39,7 @@ function exampleText(op: OperationInfo | undefined): string {
  */
 export function ApiExplorer({ presetService }: ApiExplorerProps) {
   const searchParams = useSearchParams();
-  const router = useRouter();
-  const pathname = usePathname();
+  const updateSearchParams = useUpdateSearchParams();
   const globalRegion = useRegion();
   const qc = useQueryClient();
 
@@ -67,12 +67,10 @@ export function ApiExplorer({ presetService }: ApiExplorerProps) {
   // Keep the URL shareable in standalone mode.
   useEffect(() => {
     if (embedded || !selectedOp) return;
-    const params = new URLSearchParams(searchParams.toString());
-    if (params.get("service") === service && params.get("operation") === operation) return;
-    params.set("service", service);
-    params.set("operation", operation);
-    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-  }, [embedded, selectedOp, service, operation, pathname, router, searchParams]);
+    const current = new URLSearchParams(window.location.search);
+    if (current.get("service") === service && current.get("operation") === operation) return;
+    updateSearchParams({ service, operation });
+  }, [embedded, selectedOp, service, operation, updateSearchParams]);
 
   const parsed = useMemo(() => parseJson(inputText), [inputText]);
   const inputIsObject = parsed.value !== undefined && typeof parsed.value === "object" && !Array.isArray(parsed.value) && parsed.value !== null;

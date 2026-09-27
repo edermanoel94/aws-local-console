@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useDeferredValue, useId, useMemo, useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { ExternalLink, RefreshCw, Search } from "lucide-react";
 import type { LogEntry } from "@/types/api";
 import { Button, Drawer, EmptyState, ErrorAlert, Loading, Panel, SelectField, Table, Td, Th, Tr } from "@/components/ui";
@@ -12,6 +12,7 @@ import { ExecutionStatusBadge, HttpStatusText } from "@/components/aws/status-ba
 import { useLog, useLogs, useService, useServices } from "@/hooks/use-queries";
 import { formatDateTime, formatDuration } from "@/lib/format";
 import { cn } from "@/lib/cn";
+import { useUpdateSearchParams } from "@/hooks/use-update-search-params";
 
 interface LogsExplorerProps {
   /** Restricts the view to one service (service detail "Activity" tab). */
@@ -25,8 +26,6 @@ const SOURCES = ["api-explorer", "console", "cli", "system"] as const;
 /** Audit log table with filters, auto refresh and a Request Inspector drawer. */
 export function LogsExplorer({ fixedService, syncUrl = false }: LogsExplorerProps) {
   const searchParams = useSearchParams();
-  const router = useRouter();
-  const pathname = usePathname();
   const initial = (key: string) => (syncUrl ? (searchParams.get(key) ?? "") : "");
 
   const [service, setService] = useState(fixedService ?? initial("service"));
@@ -50,19 +49,14 @@ export function LogsExplorer({ fixedService, syncUrl = false }: LogsExplorerProp
   const fetched = useLog(selectedId && !selectFromList ? selectedId : undefined);
   const selected = selectFromList ?? fetched.data;
 
-  const setUrl = (mutate: (p: URLSearchParams) => void) => {
-    const params = new URLSearchParams(searchParams.toString());
-    mutate(params);
-    const qs = params.toString();
-    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
-  };
+  const updateSearchParams = useUpdateSearchParams();
   const select = (id: string | null) => {
-    if (syncUrl) setUrl((p) => (id ? p.set("id", id) : p.delete("id")));
+    if (syncUrl) updateSearchParams({ id });
     else setLocalSelected(id);
   };
   const updateFilter = (key: string, value: string, set: (v: string) => void) => {
     set(value);
-    if (syncUrl) setUrl((p) => (value ? p.set(key, value) : p.delete(key)));
+    if (syncUrl) updateSearchParams({ [key]: value });
   };
 
   const filtersActive = !!(operation || status || source || q || (!fixedService && service));
@@ -72,7 +66,7 @@ export function LogsExplorer({ fixedService, syncUrl = false }: LogsExplorerProp
     setSource("");
     setQ("");
     if (!fixedService) setService("");
-    if (syncUrl) setUrl((p) => ["service", "operation", "status", "source", "q"].forEach((k) => p.delete(k)));
+    if (syncUrl) updateSearchParams({ service: null, operation: null, status: null, source: null, q: null });
   };
 
   const serviceOptions = useMemo(
