@@ -8,6 +8,7 @@ import {
   Settings,
   SquareTerminal,
   Braces,
+  Calculator,
   type LucideIcon,
 } from "lucide-react";
 
@@ -24,6 +25,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/services", label: "Services", icon: Layers, description: "Browse services by category" },
   { href: "/resources", label: "Resources", icon: Boxes, description: "Resource Explorer across services" },
   { href: "/api-explorer", label: "API Explorer", icon: Braces, description: "Execute any AWS operation" },
+  { href: "/costs", label: "Cost Simulator", icon: Calculator, description: "Estimate the monthly AWS cost" },
   { href: "/architecture", label: "Architecture", icon: Network, description: "Resource relationship graph" },
   { href: "/events", label: "Events", icon: Activity, description: "Resource lifecycle events" },
   { href: "/logs", label: "Logs", icon: ScrollText, description: "Audit log and request inspector" },

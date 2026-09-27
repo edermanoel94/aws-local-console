@@ -5,6 +5,7 @@ It uses [Floci](https://github.com/floci-io/floci) as the local AWS runtime, so 
 
 You can list, create, inspect, edit and delete resources, run arbitrary AWS operations, inspect requests and responses, browse logs and events, and explore relationships between resources.
 The console has a light and a dark theme, and by default follows the one of your operating system; pick one from the top bar or in Settings.
+The Cost Simulator estimates what the resources of the selected region would cost per month on AWS: it applies public on-demand list prices of US East (N. Virginia) to the resources it finds and to the monthly usage you type for each service.
 
 ## Run the published images
 
