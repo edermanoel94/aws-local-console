@@ -3,9 +3,53 @@
 AWS Local Console is a web application to explore and operate AWS services visually, with an interface inspired by the AWS Management Console.
 It uses [Floci](https://github.com/floci-io/floci) as the local AWS runtime, so everything runs on your machine without an AWS account.
 
+![AWS Local Console dashboard with recent operations across DynamoDB, SQS and SNS](docs/screenshots/dashboard.png)
+
 You can list, create, inspect, edit and delete resources, run arbitrary AWS operations, inspect requests and responses, browse logs and events, and explore relationships between resources.
 The console has a light and a dark theme, and by default follows the one of your operating system; pick one from the top bar or in Settings.
 The Cost Simulator estimates what the resources of the selected region would cost per month on AWS: it applies public on-demand list prices of US East (N. Virginia) to the resources it finds and to the monthly usage you type for each service.
+
+## Why use it
+
+Local AWS emulators are great for tests, but they have no console: you end up reading JSON from the CLI to find out what a queue holds or which items a table has.
+AWS Local Console gives your local environment the console experience you already know from AWS, so you can:
+
+- **See your whole environment at a glance**: services, resources, recent operations and the health of Floci on one dashboard.
+- **Develop and debug without an AWS account or bill**: create tables, queues and topics, send test messages and edit items in seconds, all on your machine.
+- **Understand what your code does**: every operation is recorded with its request, response, status and duration, whether it came from the console, the API Explorer or the CLI.
+- **Explore event-driven flows**: follow a message from an SNS topic to its SQS subscribers, and from a DynamoDB stream to its Lambda trigger.
+- **Plan before you deploy**: the Cost Simulator estimates what the same resources would cost per month on AWS.
+
+## A quick tour
+
+### DynamoDB
+
+Browse tables with their keys, item counts and capacity mode, then scan or query items, filter them and edit them in place.
+
+| Tables | Items |
+|---|---|
+| ![DynamoDB tables with partition and sort keys](docs/screenshots/dynamodb-tables.png) | ![DynamoDB items explorer showing the orders of a demo shop](docs/screenshots/dynamodb-items.png) |
+
+### SQS
+
+List standard and FIFO queues with their message counts, then send, receive and delete messages from the browser.
+Dead-letter queues, redrive policies and Lambda triggers are one click away.
+
+| Queues | Messages |
+|---|---|
+| ![SQS queues with available and in-flight messages](docs/screenshots/sqs-queues.png) | ![Messages received from an SQS queue](docs/screenshots/sqs-messages.png) |
+
+### SNS
+
+Create topics, subscribe queues, Lambda functions, HTTP endpoints or email addresses, see which subscriptions are confirmed and publish messages to test the fan-out.
+
+| Topics | Subscriptions |
+|---|---|
+| ![SNS topics](docs/screenshots/sns-topics.png) | ![SNS topic with SQS and email subscriptions](docs/screenshots/sns-topic.png) |
+
+### Dark theme
+
+![AWS Local Console dashboard in the dark theme](docs/screenshots/dashboard-dark.png)
 
 ## Run the published images
 
