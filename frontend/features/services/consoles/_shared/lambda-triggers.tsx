@@ -8,6 +8,7 @@ import { ResourceTable } from "./resource-table";
 interface Mapping {
   UUID: string;
   FunctionArn: string;
+  EventSourceArn?: string;
   State?: string;
   BatchSize?: number;
   StartingPosition?: string;
@@ -27,11 +28,13 @@ export function startingPositionLabel(value: string | undefined): string {
 /** Lambda functions consuming an event source (event source mappings of a queue or stream). */
 export function LambdaTriggers({ eventSourceArn, description, stream }: { eventSourceArn: string; description: string; stream?: boolean }) {
   const mappings = useAwsQuery<{ EventSourceMappings?: Mapping[] | null }>("lambda", "ListEventSourceMappings", { EventSourceArn: eventSourceArn }, { enabled: !!eventSourceArn });
+  // Floci ignores the EventSourceArn filter and returns every mapping, so keep only this source's.
+  const items = mappings.data ? (mappings.data.EventSourceMappings ?? []).filter((m) => m.EventSourceArn === eventSourceArn) : undefined;
   return (
     <ResourceTable<Mapping>
       title="Lambda triggers"
       description={description}
-      items={mappings.data ? (mappings.data.EventSourceMappings ?? []) : undefined}
+      items={items}
       loading={mappings.isLoading}
       fetching={mappings.isFetching}
       error={mappings.error}

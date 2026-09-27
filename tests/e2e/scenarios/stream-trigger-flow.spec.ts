@@ -71,6 +71,8 @@ test.describe("DynamoDB stream trigger flow", () => {
     // The table's Streams tab shows the record and the function consuming the stream.
     await openTab(page, "Streams");
     await expect(row(page, "Lambda triggers", names.fn)).toContainText("Trim horizon");
+    // Only the stream's own trigger, not the mappings of other sources (other tests create SQS triggers in parallel).
+    await expect(page.getByRole("table", { name: "Lambda triggers" }).getByRole("row")).toHaveCount(2);
     await expect(row(page, "Stream records", "INSERT")).toContainText("id: order-1");
 
     // The function received the record.
