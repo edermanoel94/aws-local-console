@@ -51,71 +51,118 @@ Create topics, subscribe queues, Lambda functions, HTTP endpoints or email addre
 
 ![AWS Local Console dashboard in the dark theme](docs/screenshots/dashboard-dark.png)
 
-## Run the published images
+## Run it with Docker
 
-No checkout or build needed: download [`compose.release.yaml`](compose.release.yaml) and start it.
-It runs Floci plus the published [`edercosta/aws-local-console`](https://hub.docker.com/r/edercosta/aws-local-console) image, a single image with the Go API and the web console (linux/amd64 and linux/arm64).
+The console is published on Docker Hub as [`edercosta/aws-local-console`](https://hub.docker.com/r/edercosta/aws-local-console): one image with the web console and its API, for `linux/amd64` and `linux/arm64`.
+It needs [Floci](https://hub.docker.com/r/floci/floci), the local AWS runtime, next to it.
+You only need Docker; no checkout, build, Node.js or Go.
+
+### With Docker Compose (recommended)
+
+Download the ready-made [`compose.release.yaml`](compose.release.yaml) and start it:
 
 ```bash
 curl -fsSLO https://raw.githubusercontent.com/edermanoel94/aws-local-console/main/compose.release.yaml
 docker compose -f compose.release.yaml up -d --wait
 ```
 
-Then open http://localhost:4500.
-Stop it with `docker compose -f compose.release.yaml down` (add `-v` to also delete persisted Floci data).
+Or put the services in your own `compose.yaml`, for example next to your application:
 
-Settings (shell variables or an `.env` file next to the compose file):
+```yaml
+services:
+  floci:
+    image: floci/floci:2.1.0
+    ports:
+      - "4566:4566"
+    environment:
+      FLOCI_STORAGE_MODE: memory # or persistent, to keep resources between restarts
+      FLOCI_SERVICES_LAMBDA_DOCKER_NETWORK: aws-local-console
+    volumes:
+      - floci-data:/app/data
+      - /var/run/docker.sock:/var/run/docker.sock # Floci runs Lambda functions as containers
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  console:
+    image: edercosta/aws-local-console:latest
+    ports:
+      - "4500:4500"
+    environment:
+      FLOCI_ENDPOINT: http://floci:4566
+    depends_on:
+      - floci
+
+volumes:
+  floci-data:
+
+networks:
+  default:
+    name: aws-local-console
+```
+
+```bash
+docker compose up -d
+```
+
+Open http://localhost:4500.
+Your code and the AWS CLI talk to Floci at http://localhost:4566 with any credentials, for example `aws --endpoint-url http://localhost:4566 sqs list-queues`.
+
+| Task | Command |
+|---|---|
+| Stop | `docker compose down` (add `-v` to also delete the Floci data volume) |
+| Update to the latest release | `docker compose pull && docker compose up -d` |
+| Follow the logs | `docker compose logs -f console` |
+
+### With Docker only
+
+Pull the images, create a network and start Floci and the console on it:
+
+```bash
+docker pull floci/floci:2.1.0
+docker pull edercosta/aws-local-console:latest
+
+docker network create aws-local-console
+
+docker run -d --name floci --network aws-local-console -p 4566:4566 \
+  -e FLOCI_SERVICES_LAMBDA_DOCKER_NETWORK=aws-local-console \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  --add-host=host.docker.internal:host-gateway \
+  floci/floci:2.1.0
+
+docker run -d --name aws-local-console --network aws-local-console -p 4500:4500 \
+  -e FLOCI_ENDPOINT=http://floci:4566 \
+  edercosta/aws-local-console:latest
+```
+
+Open http://localhost:4500.
+To keep resources between restarts, add `-e FLOCI_STORAGE_MODE=persistent -v floci-data:/app/data` to the Floci command.
+
+Already running Floci on your machine? Start only the console and point it at the host:
+
+```bash
+docker run -d --name aws-local-console -p 4500:4500 \
+  --add-host=host.docker.internal:host-gateway \
+  -e FLOCI_ENDPOINT=http://host.docker.internal:4566 \
+  edercosta/aws-local-console:latest
+```
+
+| Task | Command |
+|---|---|
+| Stop and remove | `docker rm -f aws-local-console floci && docker network rm aws-local-console` |
+| Update to the latest release | `docker pull edercosta/aws-local-console:latest`, then remove the container and run it again |
+| Follow the logs | `docker logs -f aws-local-console` |
+
+### Settings
 
 | Variable | Default | Description |
 |---|---|---|
-| `FLOCI_STORAGE_MODE` | `memory` | `memory` loses all resources on restart; `persistent` (or `hybrid`) keeps them in the `floci-data` volume |
 | `FLOCI_ENDPOINT` | `http://floci:4566` | Floci URL used by the console |
-| `LOG_LEVEL` | `info` | Go API log level: `trace`, `debug`, `info`, `warning` (or `warn`) or `error` |
+| `LOG_LEVEL` | `info` | Console API log level: `trace`, `debug`, `info`, `warning` (or `warn`) or `error` |
+| `FLOCI_STORAGE_MODE` (Floci) | `memory` | `memory` loses all resources on restart; `persistent` (or `hybrid`) keeps them in `/app/data` |
 
+The console works however it is opened (localhost, 127.0.0.1, a LAN IP, a tunnel or another device), with no extra setup.
+Pin a version such as `edercosta/aws-local-console:0.1.4` instead of `latest` for reproducible setups, or use `edge` to follow the `main` branch with the features that are not released yet.
 The Docker Hub page text lives in [`docker/README.dockerhub.md`](docker/README.dockerhub.md).
-
-## Architecture
-
-```text
-              Browser
-                 |  http://localhost:4500 (the only published port)
-                 v
-  +-- console image: edercosta/aws-local-console ---+
-  |                                                 |
-  |   +-----------------------------------------+   |
-  |   |  Next.js (frontend/)                    |   |
-  |   |  App Router, React, TanStack Query,     |   |
-  |   |  Zustand, Monaco, React Flow, xterm.js  |   |
-  |   +--------------------+--------------------+   |
-  |                        | /api/v1 proxy          |
-  |                        v 127.0.0.1:8080         |
-  |   +-----------------------------------------+   |
-  |   |  Go API (backend/)                      |   |
-  |   |  Service Registry, Operation Engine,    |   |
-  |   |  Resource Explorer, Audit               |   |
-  |   +--------------------+--------------------+   |
-  |                        |                        |
-  +------------------------|------------------------+
-                           | AWS SDK for Go v2
-                           v
-  +-------------------------------------------------+
-  |  Floci (floci/floci)     http://localhost:4566  |
-  |  S3, SQS, SNS, DynamoDB, Lambda, API Gateway,   |
-  |  EventBridge, ...                               |
-  +------------------------+------------------------+
-                           | Docker socket
-                           v
-                Lambda runtime containers
-             (siblings on the same Docker network)
-
-
-  Playwright (tests/e2e/) -> Browser -> Next.js -> Go API -> Floci
-```
-
-The Go API and the Next.js server ship together in one image (root [`Dockerfile`](Dockerfile)); [`docker/entrypoint.mjs`](docker/entrypoint.mjs) starts both and stops the container if the API dies.
-The browser only talks to Next.js: it calls `/api/v1/*` on the same origin, and a Next.js route handler proxies those requests to the Go API (`API_INTERNAL_URL`, read at runtime).
-So the console works however it is opened (localhost, 127.0.0.1, a LAN IP, a tunnel or another device), with no CORS setup and no API URL baked into the image.
-The shared contract between the three parts lives in [docs/CONTRACT.md](docs/CONTRACT.md), and the product specification in [SPEC.md](SPEC.md).
 
 ## Requirements
 
@@ -148,6 +195,7 @@ Other stack commands:
 
 ## Local development workflow
 
+The contract shared by the web app, the API and the tests lives in [docs/CONTRACT.md](docs/CONTRACT.md), and the product specification in [SPEC.md](SPEC.md).
 For day-to-day work run Floci in Docker and the API and web app on the host, with hot reload:
 
 ```bash
@@ -301,28 +349,6 @@ make release            # or: make release VERSION=1.2.3
 
 `make release` builds each platform separately and pushes `<version>-<arch>` tags, then joins them into the multi-arch `<version>` and `latest` tags.
 It refuses to run with a dirty working tree or a non-semver version.
-
-## Project structure
-
-```text
-.
-├── backend/                 Go API (AWS SDK for Go v2)
-│   ├── cmd/api/             API entry point
-│   ├── internal/            Service registry, operation engine, discovery, audit
-│   └── Dockerfile
-├── frontend/                Next.js app (App Router, TypeScript, Tailwind CSS)
-│   ├── app/                 Routes
-│   ├── components/          Shared UI components
-│   ├── features/            Feature modules (services, explorer, CLI, ...)
-│   └── Dockerfile           Multi-stage build on `output: "standalone"`
-├── tests/e2e/               Playwright end-to-end suite
-├── docs/CONTRACT.md         API and UI contract shared by all parts
-├── scripts/wait-for.sh      Wait until an HTTP endpoint is healthy
-├── docker-compose.yml       Floci + Go API + Next.js
-├── playwright.config.ts     Playwright configuration
-├── Makefile                 Developer and CI entry points
-└── SPEC.md                  Product specification
-```
 
 ## License
 
