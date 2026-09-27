@@ -24,6 +24,7 @@ export interface EventSourceMapping {
   FunctionArn?: string;
   State?: string;
   BatchSize?: number;
+  StartingPosition?: string;
   LastModified?: string;
 }
 

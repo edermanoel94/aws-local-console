@@ -1,15 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Plus } from "lucide-react";
 import { Badge, Button, Dialog, ErrorAlert, SelectField, TextField } from "@/components/ui";
-import { nameFromArn, useAwsQuery, useConsoleAction } from "../_shared/aws";
-import { Checkbox, ConfirmDialog, RemoveIconButton } from "../_shared/controls";
+import { eventSourceName, useAwsQuery, useConsoleAction } from "../_shared/aws";
+import { Checkbox, ConfirmDialog, RadioCards, RemoveIconButton } from "../_shared/controls";
 import { formatDateTime } from "../_shared/format";
-import { useQueueOptions } from "../_shared/pickers";
+import { STARTING_POSITIONS, startingPositionLabel } from "../_shared/lambda-triggers";
+import { useQueueOptions, useStreamOptions } from "../_shared/pickers";
 import { ResourceTable } from "../_shared/resource-table";
 import { requiredInt } from "../_shared/validation";
 import type { EventSourceMapping, FunctionConfiguration } from "./lambda-types";
@@ -56,20 +57,21 @@ export function TriggersTab({ fn }: { fn: FunctionConfiguration }) {
         filterText={(m) => `${m.EventSourceArn ?? ""} ${m.UUID}`}
         searchPlaceholder="Find triggers"
         emptyTitle="No triggers"
-        emptyDescription="Add a trigger to invoke this function with messages from an SQS queue."
+        emptyDescription="Add a trigger to invoke this function with messages from an SQS queue or changes from a DynamoDB stream."
         columns={[
           { header: "Source", cell: (m) => <Badge tone="blue">{sourceService(m.EventSourceArn)}</Badge> },
           {
             header: "Event source",
             cell: (m) => (
               <span className="flex flex-col">
-                <span className="font-bold">{nameFromArn(m.EventSourceArn ?? "")}</span>
+                <span className="font-bold">{eventSourceName(m.EventSourceArn ?? "")}</span>
                 <span className="font-mono text-xs break-all text-aws-muted">{m.EventSourceArn}</span>
               </span>
             ),
           },
           { header: "State", cell: (m) => <Badge tone={m.State === "Enabled" ? "green" : "gray"}>{m.State ?? "-"}</Badge> },
           { header: "Batch size", cell: (m) => m.BatchSize ?? "-" },
+          { header: "Starting position", cell: (m) => startingPositionLabel(m.StartingPosition) },
           { header: "Last modified", cell: (m) => formatDateTime(m.LastModified), className: "whitespace-nowrap" },
           {
             header: "Actions",
@@ -79,7 +81,7 @@ export function TriggersTab({ fn }: { fn: FunctionConfiguration }) {
                 <Button size="sm" onClick={() => toggle.mutate(m)} loading={toggle.isPending && toggle.variables?.UUID === m.UUID}>
                   {m.State === "Enabled" ? "Disable" : "Enable"}
                 </Button>
-                <RemoveIconButton label={`Delete trigger ${nameFromArn(m.EventSourceArn ?? m.UUID)}`} onClick={() => setRemoving(m)} />
+                <RemoveIconButton label={`Delete trigger ${eventSourceName(m.EventSourceArn ?? m.UUID)}`} onClick={() => setRemoving(m)} />
               </span>
             ),
           },
@@ -99,31 +101,56 @@ export function TriggersTab({ fn }: { fn: FunctionConfiguration }) {
         error={remove.error}
       >
         <p>
-          Delete the trigger from <strong className="break-all">{nameFromArn(removing?.EventSourceArn ?? "")}</strong>? The function stops receiving its records.
+          Delete the trigger from <strong className="break-all">{eventSourceName(removing?.EventSourceArn ?? "")}</strong>? The function stops receiving its records.
         </p>
       </ConfirmDialog>
     </>
   );
 }
 
-const triggerSchema = z.object({
-  queueArn: z.string().regex(/^arn:aws:sqs:/, "Choose an SQS queue."),
-  batchSize: requiredInt(1, 10000, "Batch size"),
-  enabled: z.boolean(),
-});
+const triggerSchema = z
+  .object({
+    source: z.enum(["sqs", "dynamodb"]),
+    queueArn: z.string(),
+    streamArn: z.string(),
+    startingPosition: z.enum(["LATEST", "TRIM_HORIZON"]),
+    batchSize: requiredInt(1, 10000, "Batch size"),
+    enabled: z.boolean(),
+  })
+  .superRefine((v, ctx) => {
+    if (v.source === "sqs" && !v.queueArn.startsWith("arn:aws:sqs:")) ctx.addIssue({ code: "custom", path: ["queueArn"], message: "Choose an SQS queue." });
+    if (v.source === "dynamodb" && !v.streamArn.includes("/stream/")) ctx.addIssue({ code: "custom", path: ["streamArn"], message: "Choose a DynamoDB table." });
+  });
 
 type TriggerValues = z.infer<typeof triggerSchema>;
 
+function pickerOptions(picker: { isLoading: boolean; data?: { value: string; label: string }[] }, noun: string, empty: string) {
+  const placeholder = picker.isLoading ? `Loading ${noun}s...` : (picker.data?.length ?? 0) === 0 ? empty : `Choose a ${noun}`;
+  return [{ value: "", label: placeholder }, ...(picker.data ?? [])];
+}
+
 function AddTriggerDialog({ fn, onClose }: { fn: FunctionConfiguration; onClose: () => void }) {
-  const queues = useQueueOptions();
-  const form = useForm<TriggerValues>({ resolver: zodResolver(triggerSchema), defaultValues: { queueArn: "", batchSize: "10", enabled: true } });
+  const form = useForm<TriggerValues>({
+    resolver: zodResolver(triggerSchema),
+    defaultValues: { source: "sqs", queueArn: "", streamArn: "", startingPosition: "LATEST", batchSize: "10", enabled: true },
+  });
+  const source = useWatch({ control: form.control, name: "source" });
+  const queues = useQueueOptions(source === "sqs");
+  const streams = useStreamOptions(source === "dynamodb");
   const add = useConsoleAction<TriggerValues>({
-    run: (v, exec) => exec("lambda", "CreateEventSourceMapping", { FunctionName: fn.FunctionName, EventSourceArn: v.queueArn, BatchSize: Number(v.batchSize), Enabled: v.enabled }),
-    successMessage: (v) => `Trigger ${nameFromArn(v.queueArn)} added to ${fn.FunctionName}`,
+    run: (v, exec) =>
+      exec("lambda", "CreateEventSourceMapping", {
+        FunctionName: fn.FunctionName,
+        EventSourceArn: v.source === "sqs" ? v.queueArn : v.streamArn,
+        BatchSize: Number(v.batchSize),
+        Enabled: v.enabled,
+        ...(v.source === "dynamodb" ? { StartingPosition: v.startingPosition } : {}),
+      }),
+    successMessage: (v) => `Trigger ${eventSourceName(v.source === "sqs" ? v.queueArn : v.streamArn)} added to ${fn.FunctionName}`,
     onSuccess: onClose,
   });
   const { errors } = form.formState;
-  const options = [{ value: "", label: queues.isLoading ? "Loading queues..." : (queues.data?.length ?? 0) === 0 ? "No queues found" : "Choose a queue" }, ...(queues.data ?? [])];
+  const picker = source === "sqs" ? queues : streams;
 
   return (
     <Dialog
@@ -140,11 +167,42 @@ function AddTriggerDialog({ fn, onClose }: { fn: FunctionConfiguration; onClose:
       }
     >
       <div className="flex flex-col gap-4">
-        <SelectField label="Trigger source" options={[{ value: "sqs", label: "Amazon SQS" }]} value="sqs" disabled onChange={() => undefined} />
-        <SelectField label="SQS queue" options={options} error={errors.queueArn?.message} {...form.register("queueArn")} />
-        <TextField label="Batch size" inputMode="numeric" description="The maximum number of messages per invocation (1 to 10,000)." error={errors.batchSize?.message} {...form.register("batchSize")} />
-        <Checkbox label="Activate trigger" description="Start polling the queue immediately." {...form.register("enabled")} />
-        {(add.error || queues.error) && <ErrorAlert error={add.error ?? queues.error} />}
+        <SelectField
+          label="Trigger source"
+          options={[
+            { value: "sqs", label: "Amazon SQS" },
+            { value: "dynamodb", label: "Amazon DynamoDB (stream)" },
+          ]}
+          {...form.register("source")}
+        />
+        {source === "sqs" ? (
+          <SelectField key="sqs" label="SQS queue" options={pickerOptions(queues, "queue", "No queues found")} error={errors.queueArn?.message} {...form.register("queueArn")} />
+        ) : (
+          <>
+            <SelectField
+              key="dynamodb"
+              label="DynamoDB table"
+              description="Tables with a stream turned on. Turn one on from the table's Streams tab in the DynamoDB console."
+              options={pickerOptions(streams, "table", "No tables with a stream found")}
+              error={errors.streamArn?.message}
+              {...form.register("streamArn")}
+            />
+            <Controller
+              control={form.control}
+              name="startingPosition"
+              render={({ field }) => <RadioCards legend="Starting position" name="starting-position" value={field.value} onChange={field.onChange} options={[...STARTING_POSITIONS]} />}
+            />
+          </>
+        )}
+        <TextField
+          label="Batch size"
+          inputMode="numeric"
+          description={source === "sqs" ? "The maximum number of messages per invocation (1 to 10,000)." : "The maximum number of stream records per invocation (1 to 10,000)."}
+          error={errors.batchSize?.message}
+          {...form.register("batchSize")}
+        />
+        <Checkbox label="Activate trigger" description={source === "sqs" ? "Start polling the queue immediately." : "Start reading the stream immediately."} {...form.register("enabled")} />
+        {(add.error || picker.error) && <ErrorAlert error={add.error ?? picker.error} />}
       </div>
     </Dialog>
   );

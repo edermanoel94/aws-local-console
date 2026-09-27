@@ -9,11 +9,16 @@ import { consolePanel, expectSuccess, openConsole, openTab, row } from "../suppo
 /** Asynchronous deliveries (event source mapping polling, EventBridge, cold starts) get this long to show up. */
 export const DELIVERY_TIMEOUT = 180_000;
 
-export async function createTable(page: Page, name: string, partitionKey: string) {
+/** Creates a table from the DynamoDB console; `stream` turns its stream on with the given view type label (e.g. "New and old images"). */
+export async function createTable(page: Page, name: string, partitionKey: string, options: { stream?: string } = {}) {
   await openConsole(page, "dynamodb");
   await consolePanel(page).getByRole("button", { name: "Create table" }).click();
   await page.getByLabel("Table name").fill(name);
   await page.getByLabel("Partition key", { exact: true }).fill(partitionKey);
+  if (options.stream) {
+    await page.getByLabel("Turn on DynamoDB stream").check();
+    await page.getByRole("radio", { name: new RegExp(`^${options.stream}`) }).check();
+  }
   await page.getByRole("button", { name: "Create", exact: true }).click();
   await expectSuccess(page, `Table ${name} created`);
   await expect(page.getByRole("heading", { level: 2, name, exact: true })).toBeVisible();

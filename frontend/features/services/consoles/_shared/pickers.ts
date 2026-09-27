@@ -44,6 +44,27 @@ async function topicOptions(exec: Exec): Promise<ArnOption[]> {
   return topics.map((t) => ({ value: t.TopicArn, label: nameFromArn(t.TopicArn) })).sort((a, b) => a.label.localeCompare(b.label));
 }
 
+async function streamOptions(exec: Exec): Promise<ArnOption[]> {
+  const tables = await listAllPages<{ TableNames?: string[] | null; LastEvaluatedTableName?: string | null }, string>(exec, "dynamodb", "ListTables", {}, {
+    items: (out) => out.TableNames,
+    next: (out) => out.LastEvaluatedTableName,
+    tokenField: "ExclusiveStartTableName",
+  });
+  const streams = await Promise.all(
+    tables.map(async (name) => {
+      try {
+        const out = await exec<{ Table?: { StreamSpecification?: { StreamEnabled?: boolean } | null; LatestStreamArn?: string | null } }>("dynamodb", "DescribeTable", { TableName: name });
+        const arn = out.Table?.LatestStreamArn;
+        return out.Table?.StreamSpecification?.StreamEnabled && arn ? { value: arn, label: name } : null;
+      } catch {
+        // Table deleted between ListTables and DescribeTable.
+        return null;
+      }
+    }),
+  );
+  return streams.filter((s): s is ArnOption => s !== null).sort((a, b) => a.label.localeCompare(b.label));
+}
+
 /** Existing SQS queues as ARN options (for triggers, subscriptions, rule targets, notifications). */
 export function useQueueOptions(enabled = true) {
   return useAwsLoader(["pickers", "sqs"], queueOptions, { enabled });
@@ -55,4 +76,9 @@ export function useFunctionOptions(enabled = true) {
 
 export function useTopicOptions(enabled = true) {
   return useAwsLoader(["pickers", "sns"], topicOptions, { enabled });
+}
+
+/** DynamoDB tables with a stream turned on, as stream ARN options labeled by table name (for Lambda triggers). */
+export function useStreamOptions(enabled = true) {
+  return useAwsLoader(["pickers", "dynamodbstreams"], streamOptions, { enabled });
 }
