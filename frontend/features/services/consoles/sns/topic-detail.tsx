@@ -7,15 +7,16 @@ import { z } from "zod";
 import { Plus, Send } from "lucide-react";
 import { Badge, Button, ConfirmDeleteDialog, Dialog, ErrorAlert, Loading, Panel, SelectField, Tabs, TextAreaField } from "@/components/ui";
 import { useRegion } from "@/hooks/use-region";
-import { ACCOUNT_ID, useAwsQuery, useConsoleAction } from "../_shared/aws";
+import { ACCOUNT_ID, useAwsLoader, useAwsQuery, useConsoleAction } from "../_shared/aws";
 import { Checkbox, ConfirmDialog, CopyableText, RemoveIconButton, SuggestField } from "../_shared/controls";
-import { ConsoleHeader, DetailsGrid } from "../_shared/layout";
+import { ConsoleHeader, ConsoleLink, DetailsGrid } from "../_shared/layout";
 import { useConsoleNav } from "../_shared/nav";
 import { useFunctionOptions, useQueueOptions } from "../_shared/pickers";
 import { ResourceTable } from "../_shared/resource-table";
 import { TagsPanel } from "../_shared/tags-panel";
 import { prettyJson } from "../_shared/format";
 import { jsonText } from "../_shared/validation";
+import { loadTopicSubscriptions, subscriptionId, type Subscription, type SubscriptionWithStatus } from "./subscriptions";
 
 type TopicTab = "subscriptions" | "details" | "tags";
 
@@ -94,7 +95,7 @@ export function TopicDetail({ topicName }: { topicName: string }) {
             />
           </Panel>
           <Tabs label="Topic sections" tabs={TABS} value={tab} onChange={(t) => navigate({ resource: topicName, detail: t })} />
-          {tab === "subscriptions" && <SubscriptionsTab topicArn={topicArn} />}
+          {tab === "subscriptions" && <SubscriptionsTab topicName={topicName} topicArn={topicArn} />}
           {tab === "details" && (
             <Panel title="Topic attributes" bodyClassName="px-0! py-0!">
               <dl className="divide-y divide-aws-border">
@@ -144,15 +145,8 @@ export function TopicDetail({ topicName }: { topicName: string }) {
   );
 }
 
-interface Subscription {
-  SubscriptionArn: string;
-  Protocol: string;
-  Endpoint: string;
-  Owner?: string;
-}
-
-function SubscriptionsTab({ topicArn }: { topicArn: string }) {
-  const subs = useAwsQuery<{ Subscriptions?: Subscription[] | null }>("sns", "ListSubscriptionsByTopic", { TopicArn: topicArn });
+function SubscriptionsTab({ topicName, topicArn }: { topicName: string; topicArn: string }) {
+  const subs = useAwsLoader(["sns", "subscriptions", topicArn], (exec) => loadTopicSubscriptions(exec, topicArn));
   const [creating, setCreating] = useState(false);
   const [removing, setRemoving] = useState<Subscription | null>(null);
   const remove = useConsoleAction<Subscription>({
@@ -163,9 +157,9 @@ function SubscriptionsTab({ topicArn }: { topicArn: string }) {
 
   return (
     <>
-      <ResourceTable<Subscription>
+      <ResourceTable<SubscriptionWithStatus>
         title="Subscriptions"
-        items={subs.data ? (subs.data.Subscriptions ?? []) : undefined}
+        items={subs.data}
         loading={subs.isLoading}
         fetching={subs.isFetching}
         error={subs.error}
@@ -182,10 +176,21 @@ function SubscriptionsTab({ topicArn }: { topicArn: string }) {
         emptyTitle="No subscriptions"
         emptyDescription="Create a subscription to deliver messages published to this topic to a queue, function or endpoint."
         columns={[
-          { header: "ID", cell: (s) => <span className="font-mono text-xs break-all">{s.SubscriptionArn.split(":").pop()}</span> },
+          {
+            header: "ID",
+            // AWS hides pending subscriptions behind a placeholder, which has no details to open.
+            cell: (s) =>
+              s.SubscriptionArn.startsWith("arn:") ? (
+                <ConsoleLink to={{ resource: topicName, view: "subscription", item: s.SubscriptionArn }} className="font-mono text-xs break-all">
+                  {subscriptionId(s.SubscriptionArn)}
+                </ConsoleLink>
+              ) : (
+                <span className="font-mono text-xs break-all">{s.SubscriptionArn}</span>
+              ),
+          },
           { header: "Protocol", cell: (s) => <Badge tone="blue">{s.Protocol.toUpperCase()}</Badge> },
           { header: "Endpoint", cell: (s) => <span className="font-mono text-xs break-all">{s.Endpoint}</span> },
-          { header: "Status", cell: (s) => (s.SubscriptionArn === "PendingConfirmation" ? <Badge tone="orange">Pending confirmation</Badge> : <Badge tone="green">Confirmed</Badge>) },
+          { header: "Status", cell: (s) => (s.status === "pending" ? <Badge tone="orange">Pending confirmation</Badge> : <Badge tone="green">Confirmed</Badge>) },
           {
             header: "Actions",
             className: "w-px text-right",

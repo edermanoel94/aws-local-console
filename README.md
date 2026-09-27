@@ -195,6 +195,7 @@ Playwright environment variables:
 |---|---|---|
 | `BASE_URL` | `http://localhost:4500` | Web app URL used by the tests |
 | `TEST_RUN_ID` | current time | Suffix that keeps resource names unique per run |
+| `E2E_HOST_FROM_FLOCI` | `host.docker.internal` | Host name under which Floci reaches HTTP servers started by the tests (SNS HTTP subscriptions) |
 
 ### Floci and Lambda networking
 
@@ -203,6 +204,11 @@ Compose pins the network name to `aws-local-console` and passes it to Floci with
 Inside a Lambda, `AWS_ENDPOINT_URL` points to `http://localhost.floci.io:4566`, which the Floci embedded DNS resolves to the Floci container.
 `FLOCI_HOSTNAME` is intentionally not set, so resource URLs returned by Floci (for example SQS queue URLs) stay usable from the host.
 Lambda containers are labelled `floci=true`, and `make down` and `make clean` remove any leftovers.
+
+### SNS HTTP subscriptions to apps on your machine
+
+Both compose files map `host.docker.internal` to the host gateway in the Floci container, so an SNS HTTP or HTTPS subscription can deliver to an app running on the host, for example `http://host.docker.internal:3000/webhook`.
+SNS first posts a `SubscriptionConfirmation` message to the endpoint; paste its `Token` or `SubscribeURL` in the subscription page of the SNS console (Confirm subscription) to start receiving notifications.
 
 ## Releasing
 

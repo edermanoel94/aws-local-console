@@ -29,6 +29,9 @@ services:
     volumes:
       - floci-data:/app/data
       - /var/run/docker.sock:/var/run/docker.sock
+    extra_hosts:
+      # SNS HTTP/HTTPS subscriptions can reach apps running on the host, e.g. http://host.docker.internal:3000/webhook.
+      - "host.docker.internal:host-gateway"
     healthcheck:
       # The Floci image ships no curl/wget/grep; probe with bash /dev/tcp and check the HTTP status line.
       test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/4566 && printf 'GET /_floci/health HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && read -r status <&3 && case \"$$status\" in *200*) exit 0;; esac; exit 1"]
