@@ -15,7 +15,7 @@ curl -fsSLO https://raw.githubusercontent.com/edermanoel94/aws-local-console/mai
 docker compose -f compose.release.yaml up -d --wait
 ```
 
-Then open http://localhost:3000.
+Then open http://localhost:4500.
 Stop it with `docker compose -f compose.release.yaml down` (add `-v` to also delete persisted Floci data).
 
 Settings (shell variables or an `.env` file next to the compose file):
@@ -31,7 +31,7 @@ The Docker Hub page text lives in [`docker/README.dockerhub.md`](docker/README.d
 
 ```text
               Browser
-                 |  http://localhost:3000 (the only published port)
+                 |  http://localhost:4500 (the only published port)
                  v
   +-- console image: edercosta/aws-local-console ---+
   |                                                 |
@@ -85,7 +85,7 @@ make up
 ```
 
 This builds the console image (Go API + Next.js), starts it with Floci, and waits until both are healthy.
-Then open http://localhost:3000.
+Then open http://localhost:4500.
 
 Other stack commands:
 
@@ -110,7 +110,7 @@ make dev-frontend   # pnpm dev (Next.js) against http://localhost:8080
 ```
 
 Run `make dev-backend` and `make dev-frontend` in separate terminals.
-Floci health can be checked at http://localhost:4566/_floci/health and the API health at http://localhost:8080/api/v1/health (in Docker, through the console at http://localhost:3000/api/v1/health).
+Floci health can be checked at http://localhost:4566/_floci/health and the API health at http://localhost:8080/api/v1/health (in Docker, through the console at http://localhost:4500/api/v1/health).
 
 Equivalent manual commands:
 
@@ -120,7 +120,7 @@ docker compose up -d --wait floci
 cd backend
 FLOCI_ENDPOINT=http://localhost:4566 AWS_REGION=us-east-1 \
 AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test \
-PORT=8080 CORS_ORIGINS=http://localhost:3000 go run ./cmd/api
+PORT=8080 CORS_ORIGINS=http://localhost:4500 go run ./cmd/api
 
 cd frontend
 pnpm install
@@ -153,7 +153,7 @@ Host ports are configurable, which helps when a default port is already taken:
 | Variable | Default | Used for |
 |---|---|---|
 | `FLOCI_PORT` | `4566` | Floci host port |
-| `WEB_PORT` | `3000` | Next.js host port |
+| `WEB_PORT` | `4500` | Next.js host port |
 
 Pass them to Make or export them before calling Docker Compose:
 
@@ -168,7 +168,7 @@ Console image environment variables (defaults already suit Compose):
 | Variable | Default | Description |
 |---|---|---|
 | `FLOCI_ENDPOINT` | `http://floci:4566` | Floci endpoint as seen from the container |
-| `PORT` | `3000` | Port the web console listens on (the published port) |
+| `PORT` | `4500` | Port the web console listens on (the published port) |
 | `API_PORT` | `8080` | Internal port of the Go API inside the container (not published) |
 | `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | `us-east-1`, `test`, `test` | Region and credentials used against Floci |
 
@@ -181,7 +181,7 @@ Go API environment variables (when running it on the host):
 | `AWS_ACCESS_KEY_ID` | `test` | Credentials accepted by Floci |
 | `AWS_SECRET_ACCESS_KEY` | `test` | Credentials accepted by Floci |
 | `PORT` | `8080` | Port the API listens on |
-| `CORS_ORIGINS` | `http://localhost:3000` | Origins allowed to call the API directly from a browser (not needed by the console) |
+| `CORS_ORIGINS` | `http://localhost:4500` | Origins allowed to call the API directly from a browser (not needed by the console) |
 
 Frontend environment variables (when running it on the host):
 
@@ -193,7 +193,7 @@ Playwright environment variables:
 
 | Variable | Default | Description |
 |---|---|---|
-| `BASE_URL` | `http://localhost:3000` | Web app URL used by the tests |
+| `BASE_URL` | `http://localhost:4500` | Web app URL used by the tests |
 | `TEST_RUN_ID` | current time | Suffix that keeps resource names unique per run |
 
 ### Floci and Lambda networking

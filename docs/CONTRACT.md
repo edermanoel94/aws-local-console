@@ -10,7 +10,7 @@ If a change to the contract is needed, update this file in the same change and k
 |---|---|---|
 | Floci | `http://localhost:4566` (health: `GET /_floci/health`) | `floci` (image `floci/floci:2.1.0`, needs `/var/run/docker.sock` mounted for Lambda) |
 | Go API | `http://localhost:8080` | `console` (same container as Next.js, `127.0.0.1:8080`, not published) |
-| Next.js | `http://localhost:3000` | `console` (image `edercosta/aws-local-console`, port 3000) |
+| Next.js | `http://localhost:4500` | `console` (image `edercosta/aws-local-console`, port 4500) |
 
 The Go API and Next.js ship as one image (root `Dockerfile`); `docker/entrypoint.mjs` runs the API as a child process on `API_PORT` and exits the container if it dies.
 
@@ -22,7 +22,7 @@ AWS_REGION=us-east-1
 AWS_ACCESS_KEY_ID=test
 AWS_SECRET_ACCESS_KEY=test
 PORT=8080
-CORS_ORIGINS=http://localhost:3000
+CORS_ORIGINS=http://localhost:4500
 ```
 
 Frontend environment variable: `API_INTERNAL_URL` (default `http://localhost:8080`; set to `http://127.0.0.1:${API_PORT}` by the image entrypoint), read at runtime.

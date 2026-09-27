@@ -1,7 +1,7 @@
 # AWS Local Console - run the published images, no source checkout or build needed.
 #
 #   docker compose -f compose.release.yaml up -d --wait
-#   open http://localhost:3000
+#   open http://localhost:4500
 #
 # Optional settings (environment variables or an .env file next to this file):
 #   FLOCI_STORAGE_MODE  memory (default, state is lost on restart), persistent or hybrid;
@@ -41,7 +41,7 @@ services:
     # The container exits if its API process dies; come back automatically.
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "4500:4500"
     environment:
       FLOCI_ENDPOINT: ${FLOCI_ENDPOINT:-http://floci:4566}
     depends_on:

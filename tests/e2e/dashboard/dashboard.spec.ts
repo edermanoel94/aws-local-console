@@ -30,7 +30,7 @@ test.describe("Dashboard", () => {
 
   test("works when opened from another host name (API is proxied through the console origin)", async ({ page, baseURL }) => {
     // Regression: the browser used to call the Go API directly, so any origin other than
-    // http://localhost:3000 (127.0.0.1, a LAN IP, a tunnel) failed with "Failed to fetch".
+    // the exact console origin (127.0.0.1, a LAN IP, a tunnel) failed with "Failed to fetch".
     const url = new URL("/dashboard", baseURL);
     url.hostname = url.hostname === "localhost" ? "127.0.0.1" : "localhost";
     await page.goto(url.toString());

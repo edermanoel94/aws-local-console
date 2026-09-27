@@ -1,7 +1,7 @@
 # AWS Local Console - full local stack: Floci (AWS emulator) + the console image
 # (Go API + Next.js in one container, built from the root Dockerfile).
 #
-# Host ports are configurable (defaults in parentheses): FLOCI_PORT (4566), WEB_PORT (3000)
+# Host ports are configurable (defaults in parentheses): FLOCI_PORT (4566), WEB_PORT (4500)
 # e.g. `WEB_PORT=13000 docker compose up -d --build --wait`.
 # Only the web port is published: the browser calls /api/v1 on it and the web
 # server proxies to the API inside the same container, so the console works from
@@ -55,7 +55,7 @@ services:
     build:
       context: .
     ports:
-      - "${WEB_PORT:-3000}:3000"
+      - "${WEB_PORT:-4500}:4500"
     environment:
       FLOCI_ENDPOINT: http://floci:4566
     depends_on:

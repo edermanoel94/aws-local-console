@@ -65,7 +65,7 @@ LABEL org.opencontainers.image.title="AWS Local Console" \
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
     HOSTNAME=0.0.0.0 \
-    PORT=3000 \
+    PORT=4500 \
     API_PORT=8080 \
     FLOCI_ENDPOINT=http://floci:4566 \
     AWS_REGION=us-east-1 \
@@ -79,8 +79,8 @@ COPY --from=web-build --chown=node:node /app/.next/standalone ./
 COPY --from=web-build --chown=node:node /app/.next/static ./.next/static
 COPY docker/entrypoint.mjs /app/entrypoint.mjs
 USER node
-EXPOSE 3000
+EXPOSE 4500
 # Healthy only when both processes answer: the web server proxies this request to the API.
 HEALTHCHECK --interval=5s --timeout=3s --start-period=10s --retries=20 \
-    CMD ["node", "-e", "fetch('http://127.0.0.1:' + (process.env.PORT || 3000) + '/api/v1/health').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
+    CMD ["node", "-e", "fetch('http://127.0.0.1:' + (process.env.PORT || 4500) + '/api/v1/health').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
 CMD ["node", "/app/entrypoint.mjs"]

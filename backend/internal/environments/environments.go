@@ -22,7 +22,7 @@ type Config struct {
 // for local development.
 func Load() Config {
 	origins := []string{}
-	for _, origin := range strings.Split(getenv("CORS_ORIGINS", "http://localhost:3000"), ",") {
+	for _, origin := range strings.Split(getenv("CORS_ORIGINS", "http://localhost:4500"), ",") {
 		if origin = strings.TrimSpace(origin); origin != "" {
 			origins = append(origins, origin)
 		}

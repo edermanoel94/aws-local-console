@@ -13,7 +13,7 @@ No AWS account needed: everything runs on your machine.
 Source code, issues and releases: https://github.com/edermanoel94/aws-local-console
 
 This single image contains the Go API and the Next.js web console.
-Only port `3000` is exposed; the browser reaches the API through the web server's `/api/v1` proxy, so the console works from any host name or device.
+Only port `4500` is exposed; the browser reaches the API through the web server's `/api/v1` proxy, so the console works from any host name or device.
 
 ## Quick start
 
@@ -22,7 +22,7 @@ curl -fsSL https://raw.githubusercontent.com/edermanoel94/aws-local-console/main
 docker compose up -d --wait
 ```
 
-Then open http://localhost:3000.
+Then open http://localhost:4500.
 The file is shown below, if you prefer to create it yourself.
 
 ```yaml
@@ -64,7 +64,7 @@ services:
     # The container exits if its API process dies; come back automatically.
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "4500:4500"
     environment:
       FLOCI_ENDPOINT: ${FLOCI_ENDPOINT:-http://floci:4566}
     depends_on:
@@ -82,7 +82,7 @@ networks:
 Already running Floci on the host?
 
 ```bash
-docker run -d -p 3000:3000 \
+docker run -d -p 4500:4500 \
   --add-host=host.docker.internal:host-gateway \
   -e FLOCI_ENDPOINT=http://host.docker.internal:4566 \
   edercosta/aws-local-console

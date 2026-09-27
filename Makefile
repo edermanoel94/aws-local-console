@@ -6,7 +6,7 @@
 SHELL := /bin/sh
 
 FLOCI_PORT ?= 4566
-WEB_PORT ?= 3000
+WEB_PORT ?= 4500
 export FLOCI_PORT WEB_PORT
 
 FLOCI_URL := http://localhost:$(FLOCI_PORT)
