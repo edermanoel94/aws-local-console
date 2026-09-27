@@ -178,7 +178,8 @@ export default function CliTerminal({ handleRef, onTranscript, onClearTranscript
       busyRef.current = true;
       callbacks.current.onBusyChange(true);
       try {
-        const region = usePreferences.getState().region;
+        // No explicit choice (null) -> omit it and the API applies its default region (AWS_REGION).
+        const region = usePreferences.getState().region ?? undefined;
         const res = await api.cli(trimmed, region);
         writeOutput(res.stdout);
         writeOutput(res.stderr, "red");

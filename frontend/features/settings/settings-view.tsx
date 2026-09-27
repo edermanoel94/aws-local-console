@@ -6,6 +6,7 @@ import { api, API_BASE_PATH } from "@/lib/api";
 import { Badge, Button, ErrorAlert, Loading, Panel, SelectField } from "@/components/ui";
 import { PageHeader } from "@/components/layout/page-header";
 import { useFlociStatus, useRegions } from "@/hooks/use-queries";
+import { useRegion } from "@/hooks/use-region";
 import { useHydrated } from "@/hooks/use-hydrated";
 import { usePreferences } from "@/stores/preferences";
 import { toast } from "@/stores/toast";
@@ -15,13 +16,12 @@ export function SettingsView() {
   const health = useQuery({ queryKey: ["health"], queryFn: api.health, retry: 0 });
   const regions = useRegions();
   const hydrated = useHydrated();
-  const region = usePreferences((s) => s.region);
   const setRegion = usePreferences((s) => s.setRegion);
   const favorites = usePreferences((s) => s.favorites);
   const clearFavorites = usePreferences((s) => s.clearFavorites);
   const favoriteCount = hydrated ? favorites.length : 0;
 
-  const regionValue = hydrated ? region : "us-east-1";
+  const regionValue = useRegion();
   const regionOptions = (regions.data ?? [{ name: regionValue, label: regionValue, default: true }]).map((r) => ({
     value: r.name,
     label: r.label && r.label !== r.name ? `${r.name} - ${r.label}` : r.name,

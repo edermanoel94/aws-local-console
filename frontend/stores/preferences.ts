@@ -2,7 +2,8 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
 interface PreferencesState {
-  region: string;
+  /** Region picked by the user; null follows the server default (see hooks/use-region.ts). */
+  region: string | null;
   favorites: string[];
   setRegion: (region: string) => void;
   toggleFavorite: (serviceId: string) => void;
@@ -13,7 +14,7 @@ interface PreferencesState {
 export const usePreferences = create<PreferencesState>()(
   persist(
     (set) => ({
-      region: "us-east-1",
+      region: null,
       favorites: [],
       setRegion: (region) => set({ region }),
       toggleFavorite: (serviceId) =>
@@ -24,6 +25,14 @@ export const usePreferences = create<PreferencesState>()(
         })),
       clearFavorites: () => set({ favorites: [] }),
     }),
-    { name: "aws-local-console-preferences" },
+    {
+      name: "aws-local-console-preferences",
+      // v0 stored "us-east-1" even when nobody picked a region; treat that as "follow the server".
+      version: 1,
+      migrate: (persisted, version) => {
+        const state = persisted as Partial<PreferencesState>;
+        return (version < 1 && state.region === "us-east-1" ? { ...state, region: null } : state) as PreferencesState;
+      },
+    },
   ),
 );

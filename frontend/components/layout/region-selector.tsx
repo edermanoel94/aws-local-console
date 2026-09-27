@@ -3,18 +3,15 @@
 import { useId } from "react";
 import { ChevronDown, Globe } from "lucide-react";
 import { usePreferences } from "@/stores/preferences";
-import { useHydrated } from "@/hooks/use-hydrated";
-import { useRegions } from "@/hooks/use-queries";
+import { useRegion, useRegions } from "@/hooks/use-region";
 
 /** Top bar region selector bound to the persisted preferences store. */
 export function RegionSelector() {
   const id = useId();
-  const hydrated = useHydrated();
-  const region = usePreferences((s) => s.region);
+  const current = useRegion();
   const setRegion = usePreferences((s) => s.setRegion);
   const { data: regions } = useRegions();
 
-  const current = hydrated ? region : "us-east-1";
   const options = regions?.length ? regions : [{ name: current, label: current, default: true }];
   const hasCurrent = options.some((r) => r.name === current);
 
