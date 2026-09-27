@@ -22,7 +22,7 @@ test.describe("Dashboard", () => {
     await expect(banner.getByRole("link", { name: /Floci.*Healthy/ })).toBeVisible();
 
     const nav = page.getByRole("navigation", { name: "Main" });
-    for (const name of ["Dashboard", "Services", "Resources", "API Explorer", "Architecture", "Events", "Logs", "CLI", "Settings"]) {
+    for (const name of ["Dashboard", "Services", "Resources", "API Explorer", "Cost Simulator", "Architecture", "Events", "Logs", "CLI", "Settings"]) {
       await expect(nav.getByRole("link", { name, exact: true })).toBeVisible();
     }
     await expect(nav.getByRole("link", { name: "Dashboard", exact: true })).toHaveAttribute("aria-current", "page");

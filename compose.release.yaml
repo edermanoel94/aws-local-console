@@ -7,6 +7,7 @@
 #   FLOCI_STORAGE_MODE  memory (default, state is lost on restart), persistent or hybrid;
 #                       persistent state lives in the floci-data volume
 #   FLOCI_ENDPOINT      Floci URL used by the console (default: the floci service)
+#   LOG_LEVEL           Go API log level: trace, debug, info (default), warning or error
 #
 # edercosta/aws-local-console is a single image with the Go API and the web
 # console; the browser calls /api/v1 on the web port, which the web server
@@ -47,6 +48,7 @@ services:
       - "4500:4500"
     environment:
       FLOCI_ENDPOINT: ${FLOCI_ENDPOINT:-http://floci:4566}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
     depends_on:
       floci:
         condition: service_healthy

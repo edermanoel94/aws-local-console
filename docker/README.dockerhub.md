@@ -30,6 +30,7 @@ The file is shown below, if you prefer to create it yourself.
 #   FLOCI_STORAGE_MODE  memory (default, state is lost on restart), persistent or hybrid;
 #                       persistent state lives in the floci-data volume
 #   FLOCI_ENDPOINT      Floci URL used by the console (default: the floci service)
+#   LOG_LEVEL           Go API log level: trace, debug, info (default), warning or error
 #
 # edercosta/aws-local-console is a single image with the Go API and the web
 # console; the browser calls /api/v1 on the web port, which the web server
@@ -67,6 +68,7 @@ services:
       - "4500:4500"
     environment:
       FLOCI_ENDPOINT: ${FLOCI_ENDPOINT:-http://floci:4566}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
     depends_on:
       floci:
         condition: service_healthy
@@ -96,6 +98,7 @@ Set these in the shell or in an `.env` file next to `compose.yaml`, e.g. `FLOCI_
 |---|---|---|
 | `FLOCI_STORAGE_MODE` | `memory` | `memory` loses all resources on restart; `persistent` (or `hybrid`) keeps them in the `floci-data` volume (remove it with `docker compose down -v`) |
 | `FLOCI_ENDPOINT` | `http://floci:4566` | Floci URL used by the console, e.g. to point it at another Floci |
+| `LOG_LEVEL` | `info` | Go API log level: `trace`, `debug`, `info`, `warning` (or `warn`) or `error` |
 
 The console assumes Floci's defaults: region `us-east-1` and account id `000000000000`.
 The container runs as the unprivileged `node` user and has a healthcheck that is healthy only when both the web server and the API answer.

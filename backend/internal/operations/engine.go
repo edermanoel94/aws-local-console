@@ -2,6 +2,7 @@ package operations
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -14,6 +15,7 @@ import (
 	"github.com/edermanoel94/aws-local-console/backend/internal/audit"
 	awsfloci "github.com/edermanoel94/aws-local-console/backend/internal/aws"
 	"github.com/edermanoel94/aws-local-console/backend/internal/coverage"
+	"github.com/edermanoel94/aws-local-console/backend/internal/logging"
 	"github.com/edermanoel94/aws-local-console/backend/internal/services"
 )
 
@@ -227,7 +229,45 @@ func (e *Engine) record(result ExecuteResponse, op *Operation, source string) {
 		entry.ErrorMessage = result.Error.Message
 	}
 	e.audit.Record(entry, op.Mutating)
-	e.logger.Info("operation executed",
+	e.log(result, source)
+}
+
+// log reports an executed operation: INFO when it succeeded, WARNING when AWS or
+// the input rejected it, ERROR when Floci was unreachable or the console failed.
+// TRACE adds the wire exchange and the payloads.
+func (e *Engine) log(result ExecuteResponse, source string) {
+	ctx := context.Background()
+	attrs := []any{
 		"id", result.ID, "service", result.Service, "operation", result.Operation, "region", result.Region,
-		"status", result.Status, "httpStatus", result.HTTPStatus, "durationMs", result.DurationMs, "source", source)
+		"status", result.Status, "httpStatus", result.HTTPStatus, "durationMs", result.DurationMs, "source", source,
+	}
+	level := slog.LevelInfo
+	if result.Error != nil {
+		attrs = append(attrs, "errorKind", result.Error.Kind, "errorCode", result.Error.Code, "error", result.Error.Message)
+		level = slog.LevelWarn
+		if result.Error.Kind == audit.KindNetwork || result.Error.Kind == audit.KindApplication {
+			level = slog.LevelError
+		}
+	}
+	e.logger.Log(ctx, level, "operation executed", attrs...)
+	logging.Trace(ctx, e.logger, "operation exchange",
+		"id", result.ID, "method", result.Request.Method, "url", result.Request.URL, "requestId", result.RequestID,
+		"input", jsonAttr(result.Request.Input), "output", jsonAttr(result.Response.Output), "errorBody", result.Response.Body,
+		"requestHeaders", result.Request.Headers, "responseHeaders", result.Response.Headers)
+}
+
+// jsonAttr renders a payload as compact JSON, only when the record is written.
+func jsonAttr(value any) slog.LogValuer { return jsonValue{value} }
+
+type jsonValue struct{ value any }
+
+func (v jsonValue) LogValue() slog.Value {
+	if v.value == nil {
+		return slog.StringValue("")
+	}
+	encoded, err := json.Marshal(v.value)
+	if err != nil {
+		return slog.StringValue(fmt.Sprintf("%v", v.value))
+	}
+	return slog.StringValue(string(encoded))
 }

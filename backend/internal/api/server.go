@@ -17,6 +17,7 @@ import (
 	"github.com/edermanoel94/aws-local-console/backend/internal/cli"
 	"github.com/edermanoel94/aws-local-console/backend/internal/coverage"
 	"github.com/edermanoel94/aws-local-console/backend/internal/environments"
+	"github.com/edermanoel94/aws-local-console/backend/internal/logging"
 	"github.com/edermanoel94/aws-local-console/backend/internal/operations"
 	"github.com/edermanoel94/aws-local-console/backend/internal/resources"
 	"github.com/edermanoel94/aws-local-console/backend/internal/services"
@@ -142,7 +143,13 @@ func (s *Server) logRequests(next http.Handler) http.Handler {
 		started := time.Now()
 		recorder := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
 		next.ServeHTTP(recorder, r)
-		s.Logger.Debug("http request", "method", r.Method, "path", r.URL.Path, "status", recorder.status, "durationMs", time.Since(started).Milliseconds())
+		// Failures of the API itself are errors; everything else is routine traffic.
+		level := slog.LevelDebug
+		if recorder.status >= http.StatusInternalServerError {
+			level = slog.LevelError
+		}
+		s.Logger.Log(r.Context(), level, "http request", "method", r.Method, "path", r.URL.Path, "status", recorder.status, "durationMs", time.Since(started).Milliseconds())
+		logging.Trace(r.Context(), s.Logger, "http request detail", "method", r.Method, "path", r.URL.Path, "query", r.URL.RawQuery, "source", r.Header.Get("X-Console-Source"), "userAgent", r.UserAgent())
 	})
 }
 

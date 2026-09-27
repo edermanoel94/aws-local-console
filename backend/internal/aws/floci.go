@@ -4,10 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"sort"
 	"sync"
 	"time"
+
+	"github.com/edermanoel94/aws-local-console/backend/internal/logging"
 )
 
 // FlociHealth is the parsed answer of Floci's GET /_floci/health.
@@ -42,14 +45,15 @@ type FlociMonitor struct {
 	endpoint string
 	client   *http.Client
 	ttl      time.Duration
+	logger   *slog.Logger
 
 	mu   sync.Mutex
 	last *FlociHealth
 }
 
 // NewFlociMonitor returns a monitor for the Floci endpoint.
-func NewFlociMonitor(f *Factory, ttl time.Duration) *FlociMonitor {
-	return &FlociMonitor{endpoint: f.Endpoint(), client: f.HTTPClient(), ttl: ttl}
+func NewFlociMonitor(f *Factory, ttl time.Duration, logger *slog.Logger) *FlociMonitor {
+	return &FlociMonitor{endpoint: f.Endpoint(), client: f.HTTPClient(), ttl: ttl, logger: logger}
 }
 
 // Endpoint returns the monitored endpoint.
@@ -71,9 +75,26 @@ func (m *FlociMonitor) Cached(ctx context.Context) FlociHealth {
 func (m *FlociMonitor) Check(ctx context.Context) FlociHealth {
 	health := m.fetch(ctx)
 	m.mu.Lock()
+	previous := m.last
 	m.last = &health
 	m.mu.Unlock()
+	m.log(ctx, previous, health)
 	return health
+}
+
+// log reports every check at TRACE, and changes of reachability at WARNING
+// (Floci went down, or is down at the first check) and INFO (Floci is back).
+func (m *FlociMonitor) log(ctx context.Context, previous *FlociHealth, health FlociHealth) {
+	logging.Trace(ctx, m.logger, "floci health checked",
+		"endpoint", m.endpoint, "healthy", health.Healthy, "latencyMs", health.Latency.Milliseconds(), "error", health.Error)
+	switch {
+	case !health.Healthy && (previous == nil || previous.Healthy):
+		m.logger.Warn("floci unreachable", "endpoint", m.endpoint, "error", health.Error)
+	case health.Healthy && previous != nil && !previous.Healthy:
+		m.logger.Info("floci reachable again", "endpoint", m.endpoint, "version", health.Version)
+	case health.Healthy && previous == nil:
+		m.logger.Info("floci reachable", "endpoint", m.endpoint, "version", health.Version, "edition", health.Edition)
+	}
 }
 
 func (m *FlociMonitor) fetch(ctx context.Context) FlociHealth {

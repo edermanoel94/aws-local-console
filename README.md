@@ -5,6 +5,7 @@ It uses [Floci](https://github.com/floci-io/floci) as the local AWS runtime, so 
 
 You can list, create, inspect, edit and delete resources, run arbitrary AWS operations, inspect requests and responses, browse logs and events, and explore relationships between resources.
 The console has a light and a dark theme, and by default follows the one of your operating system; pick one from the top bar or in Settings.
+The Cost Simulator estimates what the resources of the selected region would cost per month on AWS: it applies public on-demand list prices of US East (N. Virginia) to the resources it finds and to the monthly usage you type for each service.
 
 ## Run the published images
 
@@ -25,6 +26,7 @@ Settings (shell variables or an `.env` file next to the compose file):
 |---|---|---|
 | `FLOCI_STORAGE_MODE` | `memory` | `memory` loses all resources on restart; `persistent` (or `hybrid`) keeps them in the `floci-data` volume |
 | `FLOCI_ENDPOINT` | `http://floci:4566` | Floci URL used by the console |
+| `LOG_LEVEL` | `info` | Go API log level: `trace`, `debug`, `info`, `warning` (or `warn`) or `error` |
 
 The Docker Hub page text lives in [`docker/README.dockerhub.md`](docker/README.dockerhub.md).
 
@@ -172,6 +174,7 @@ Console image environment variables (defaults already suit Compose):
 | `PORT` | `4500` | Port the web console listens on (the published port) |
 | `API_PORT` | `8080` | Internal port of the Go API inside the container (not published) |
 | `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | `us-east-1`, `test`, `test` | Region and credentials used against Floci |
+| `LOG_LEVEL` | `info` | Go API log level (see below) |
 
 Go API environment variables (when running it on the host):
 
@@ -183,6 +186,17 @@ Go API environment variables (when running it on the host):
 | `AWS_SECRET_ACCESS_KEY` | `test` | Credentials accepted by Floci |
 | `PORT` | `8080` | Port the API listens on |
 | `CORS_ORIGINS` | `http://localhost:4500` | Origins allowed to call the API directly from a browser (not needed by the console) |
+| `LOG_LEVEL` | `info` | `trace`, `debug`, `info`, `warning` (or `warn`) or `error`; an unknown value logs a warning and falls back to `info` |
+
+The Go API logs to stdout, one line per record, at five levels:
+
+| Level | What is logged |
+|---|---|
+| `TRACE` | Every request's query and caller, the AWS wire exchange of each operation (URL, headers with credentials redacted, input and output payloads) and every Floci health check |
+| `DEBUG` | Every HTTP request with its status and duration, and each service's resource discovery |
+| `INFO` | Startup, successful operations and Floci becoming reachable |
+| `WARNING` | Operations rejected by AWS or by input validation, failed resource discovery, Floci becoming unreachable and an unknown `LOG_LEVEL` |
+| `ERROR` | Operations that failed because Floci was unreachable or the console failed, panics and HTTP 5xx answers |
 
 Frontend environment variables (when running it on the host):
 
