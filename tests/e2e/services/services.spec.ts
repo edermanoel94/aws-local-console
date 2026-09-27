@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { runInApiExplorer } from "../support/api-explorer";
 
 const CATEGORIES = ["Compute", "Storage", "Database", "Networking", "Security", "Application Integration", "Management", "Analytics"];
 const TABS = ["Overview", "Resources", "Operations", "API Explorer", "Activity", "Coverage"];
@@ -87,6 +88,20 @@ test.describe("Services", () => {
     await expect(main.getByRole("tab", { name: "Resources" })).toHaveAttribute("aria-selected", "true");
     // CloudWatch Logs has no dedicated console: the generic table (or its empty state) is shown.
     await expect(main.getByRole("table", { name: "Resources" }).or(main.getByText(/^No log-groups/))).toBeVisible();
+  });
+
+  test("DynamoDB Streams has no Resources tab and runs its operations from the API Explorer", async ({ page }) => {
+    await page.goto("/services/dynamodbstreams?tab=resources");
+    await expect(page.getByRole("heading", { level: 1, name: "Amazon DynamoDB Streams" })).toBeVisible();
+    const tablist = page.getByRole("tablist", { name: "Sections" });
+    await expect(tablist.getByRole("tab", { name: "Resources", exact: true })).toHaveCount(0);
+    // A ?tab=resources link falls back to the overview, which has no Resources panel either.
+    await expect(tablist.getByRole("tab", { name: "Overview" })).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByRole("heading", { name: "Service details" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /^Resources/ })).toHaveCount(0);
+
+    expect(await runInApiExplorer(page, { service: "dynamodbstreams", operation: "ListStreams", input: {} })).toBe(200);
+    await expect(page.getByRole("main").getByText('"Streams"')).toBeVisible();
   });
 
   test("unknown service shows a not found state", async ({ page }) => {

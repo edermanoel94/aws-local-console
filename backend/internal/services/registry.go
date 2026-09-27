@@ -11,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/apigatewayv2"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodbstreams"
 	"github.com/aws/aws-sdk-go-v2/service/eventbridge"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/aws/aws-sdk-go-v2/service/lambda"
@@ -100,6 +101,15 @@ var definitions = []Definition{
 		ResourceTypes: []string{"table"},
 		Capabilities:  consoleCapabilities,
 		NewClient:     func(cfg sdkaws.Config) any { return dynamodb.NewFromConfig(cfg) },
+	},
+	{
+		// Streams are served by Floci's DynamoDB service and browsed from the DynamoDB console's Streams tab.
+		ID: "dynamodbstreams", FlociID: "dynamodb", Name: "Amazon DynamoDB Streams", ShortName: "DynamoDB Streams",
+		Description:   "Time-ordered change records of DynamoDB table items.",
+		Category:      CategoryDatabase,
+		ResourceTypes: []string{},
+		Capabilities:  []string{CapabilityAPIExplorer},
+		NewClient:     func(cfg sdkaws.Config) any { return dynamodbstreams.NewFromConfig(cfg) },
 	},
 	{
 		ID: "lambda", FlociID: "lambda", Name: "AWS Lambda", ShortName: "Lambda",

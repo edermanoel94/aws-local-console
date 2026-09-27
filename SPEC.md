@@ -555,6 +555,11 @@ Update Item
 Delete Item
 Query
 Scan
+Query / Scan on a global or local secondary index
+Filters (FilterExpression) and descending order
+Pagination (Limit + Load more)
+Create Table with global and local secondary indexes
+Create / Delete a global secondary index
 Delete Table
 ```
 

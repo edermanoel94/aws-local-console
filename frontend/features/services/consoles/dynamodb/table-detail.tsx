@@ -1,23 +1,26 @@
 "use client";
 
 import { useState } from "react";
-import { Button, ConfirmDeleteDialog, EmptyState, ErrorAlert, Loading, Panel, Table, Tabs, Td, Th, Tr } from "@/components/ui";
+import { Button, ConfirmDeleteDialog, ErrorAlert, Loading, Panel, Tabs } from "@/components/ui";
 import { useAwsLoader, useConsoleAction } from "../_shared/aws";
 import { CopyableText } from "../_shared/controls";
 import { formatBytes, formatDateTime } from "../_shared/format";
 import { ConsoleHeader, DetailsGrid } from "../_shared/layout";
 import { useConsoleNav } from "../_shared/nav";
 import { TagsPanel } from "../_shared/tags-panel";
-import { describeTable, tableKeys, TYPE_LABELS, type TableDescription } from "./ddb-types";
+import { describeKey, describeTable, streamEnabled, streamViewTypeLabel, tableKeys, type TableDescription } from "./ddb-types";
+import { IndexesTab } from "./indexes-tab";
+import { StreamsTab } from "./streams-tab";
 import { ItemsExplorer } from "./items-explorer";
 import { StatusBadge } from "./table-list";
 
-type TableTab = "items" | "overview" | "indexes" | "tags";
+type TableTab = "items" | "overview" | "indexes" | "streams" | "tags";
 
 const TABS: { value: TableTab; label: string }[] = [
   { value: "items", label: "Explore items" },
   { value: "overview", label: "Overview" },
   { value: "indexes", label: "Indexes" },
+  { value: "streams", label: "Streams" },
   { value: "tags", label: "Tags" },
 ];
 
@@ -54,7 +57,8 @@ export function TableDetail({ tableName }: { tableName: string }) {
           <Tabs label="Table sections" tabs={TABS} value={tab} onChange={(t) => navigate({ resource: tableName, detail: t })} />
           {tab === "items" && <ItemsExplorer table={table.data} />}
           {tab === "overview" && <Overview table={table.data} />}
-          {tab === "indexes" && <Indexes table={table.data} />}
+          {tab === "indexes" && <IndexesTab table={table.data} />}
+          {tab === "streams" && <StreamsTab table={table.data} />}
           {tab === "tags" && table.data.TableArn && (
             <TagsPanel
               queryKey={["dynamodb-table", tableName]}
@@ -97,8 +101,8 @@ function Overview({ table }: { table: TableDescription }) {
       <Panel title="General information">
         <DetailsGrid
           items={[
-            { label: "Partition key", value: `${keys.partition.name} (${TYPE_LABELS[keys.partition.type] ?? keys.partition.type})` },
-            { label: "Sort key", value: keys.sort ? `${keys.sort.name} (${TYPE_LABELS[keys.sort.type] ?? keys.sort.type})` : "-" },
+            { label: "Partition key", value: describeKey(keys.partition) },
+            { label: "Sort key", value: keys.sort ? describeKey(keys.sort) : "-" },
             { label: "Capacity mode", value: onDemand ? "On-demand" : "Provisioned" },
             { label: "Table status", value: <StatusBadge status={table.TableStatus} /> },
             { label: "Creation date", value: formatDateTime(table.CreationDateTime) },
@@ -115,47 +119,10 @@ function Overview({ table }: { table: TableDescription }) {
               label: "Read / write capacity",
               value: onDemand ? "On-demand" : `${table.ProvisionedThroughput?.ReadCapacityUnits ?? "-"} RCU / ${table.ProvisionedThroughput?.WriteCapacityUnits ?? "-"} WCU`,
             },
-            { label: "DynamoDB stream", value: table.StreamSpecification?.StreamEnabled ? `On (${table.StreamSpecification.StreamViewType})` : "Off" },
+            { label: "DynamoDB stream", value: streamEnabled(table) ? `On (${streamViewTypeLabel(table.StreamSpecification?.StreamViewType)})` : "Off" },
           ]}
         />
       </Panel>
     </>
-  );
-}
-
-function Indexes({ table }: { table: TableDescription }) {
-  const indexes = [
-    ...(table.GlobalSecondaryIndexes ?? []).map((i) => ({ ...i, kind: "Global" })),
-    ...(table.LocalSecondaryIndexes ?? []).map((i) => ({ ...i, kind: "Local", IndexStatus: "ACTIVE" })),
-  ];
-  return (
-    <Panel title="Secondary indexes" count={indexes.length} bodyClassName={indexes.length ? "px-0! py-0!" : undefined}>
-      {indexes.length === 0 ? (
-        <EmptyState title="No secondary indexes" description="Indexes let you query the table by alternate keys." />
-      ) : (
-        <Table aria-label="Secondary indexes" className="[&_tbody_tr:last-child_td]:border-b-0">
-          <thead>
-            <tr>
-              <Th className="pl-5">Name</Th>
-              <Th>Type</Th>
-              <Th>Partition key</Th>
-              <Th>Sort key</Th>
-              <Th className="pr-5">Projection</Th>
-            </tr>
-          </thead>
-          <tbody>
-            {indexes.map((i) => (
-              <Tr key={i.IndexName}>
-                <Td className="pl-5 font-bold">{i.IndexName}</Td>
-                <Td>{i.kind}</Td>
-                <Td>{i.KeySchema.find((k) => k.KeyType === "HASH")?.AttributeName ?? "-"}</Td>
-                <Td>{i.KeySchema.find((k) => k.KeyType === "RANGE")?.AttributeName ?? "-"}</Td>
-                <Td className="pr-5">{i.Projection?.ProjectionType ?? "-"}</Td>
-              </Tr>
-            ))}
-          </tbody>
-        </Table>
-      )}
-    </Panel>
   );
 }

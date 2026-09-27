@@ -9,6 +9,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/apigatewayv2 v1.44.0
 	github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.88.1
 	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.69.1
+	github.com/aws/aws-sdk-go-v2/service/dynamodbstreams v1.43.0
 	github.com/aws/aws-sdk-go-v2/service/eventbridge v1.55.0
 	github.com/aws/aws-sdk-go-v2/service/iam v1.64.1
 	github.com/aws/aws-sdk-go-v2/service/lambda v1.110.0

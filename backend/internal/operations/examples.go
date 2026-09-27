@@ -14,9 +14,11 @@ const (
 	exampleQueueURL = "http://localhost:4566/" + exampleAccount + "/my-queue"
 	exampleQueueARN = "arn:aws:sqs:" + exampleRegion + ":" + exampleAccount + ":my-queue"
 	exampleTopicARN = "arn:aws:sns:" + exampleRegion + ":" + exampleAccount + ":my-topic"
-	exampleFunction = "arn:aws:lambda:" + exampleRegion + ":" + exampleAccount + ":function:my-function"
-	exampleRoleARN  = "arn:aws:iam::" + exampleAccount + ":role/lambda-role"
-	exampleLambdaJS = "export const handler = async (event) => {\n  console.log('event', JSON.stringify(event));\n  return { statusCode: 200, body: JSON.stringify({ message: 'Hello from Lambda', input: event }) };\n};\n"
+	// Floci labels streams with the creation time; take the real ARN from DescribeTable.LatestStreamArn.
+	exampleStreamARN = "arn:aws:dynamodb:" + exampleRegion + ":" + exampleAccount + ":table/my-table/stream/2026-01-01T00:00:00.000"
+	exampleFunction  = "arn:aws:lambda:" + exampleRegion + ":" + exampleAccount + ":function:my-function"
+	exampleRoleARN   = "arn:aws:iam::" + exampleAccount + ":role/lambda-role"
+	exampleLambdaJS  = "export const handler = async (event) => {\n  console.log('event', JSON.stringify(event));\n  return { statusCode: 200, body: JSON.stringify({ message: 'Hello from Lambda', input: event }) };\n};\n"
 )
 
 type object = map[string]any
@@ -114,6 +116,16 @@ var curatedExamples = map[string]object{
 		"ExpressionAttributeValues": object{":pk": object{"S": "item-1"}},
 	},
 	"dynamodb.Scan": {"TableName": "my-table"},
+
+	// DynamoDB Streams
+	"dynamodbstreams.ListStreams":    {"TableName": "my-table"},
+	"dynamodbstreams.DescribeStream": {"StreamArn": exampleStreamARN},
+	"dynamodbstreams.GetShardIterator": {
+		"StreamArn":         exampleStreamARN,
+		"ShardId":           "shardId-00000000000000000000-00000000",
+		"ShardIteratorType": "TRIM_HORIZON",
+	},
+	"dynamodbstreams.GetRecords": {"ShardIterator": "<ShardIterator from GetShardIterator>"},
 
 	// Lambda
 	"lambda.CreateFunction": {

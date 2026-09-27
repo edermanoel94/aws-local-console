@@ -141,6 +141,8 @@ func ResourceName(service, operation string, input, output map[string]any) strin
 				break
 			}
 		}
+	case "dynamodbstreams":
+		name = first(input, "StreamArn", "TableName")
 	case "lambda":
 		name = first(input, "FunctionName", "Resource")
 		if name == "" {
@@ -194,6 +196,11 @@ func ResourceARN(service, region, account, name string, input, output map[string
 		return fmt.Sprintf("arn:aws:sns:%s:%s:%s", region, account, name)
 	case "dynamodb":
 		if arn := first(output, "TableDescription.TableArn"); arn != "" {
+			return arn
+		}
+		return fmt.Sprintf("arn:aws:dynamodb:%s:%s:table/%s", region, account, name)
+	case "dynamodbstreams":
+		if arn := first(input, "StreamArn"); arn != "" {
 			return arn
 		}
 		return fmt.Sprintf("arn:aws:dynamodb:%s:%s:table/%s", region, account, name)

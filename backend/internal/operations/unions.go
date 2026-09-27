@@ -6,6 +6,7 @@ import (
 
 	logstypes "github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
 	dynamodbtypes "github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
+	streamstypes "github.com/aws/aws-sdk-go-v2/service/dynamodbstreams/types"
 	iamtypes "github.com/aws/aws-sdk-go-v2/service/iam/types"
 	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
 )
@@ -26,6 +27,16 @@ var unionMembers = []any{
 	&dynamodbtypes.AttributeValueMemberNULL{},
 	&dynamodbtypes.AttributeValueMemberS{},
 	&dynamodbtypes.AttributeValueMemberSS{},
+	&streamstypes.AttributeValueMemberB{},
+	&streamstypes.AttributeValueMemberBOOL{},
+	&streamstypes.AttributeValueMemberBS{},
+	&streamstypes.AttributeValueMemberL{},
+	&streamstypes.AttributeValueMemberM{},
+	&streamstypes.AttributeValueMemberN{},
+	&streamstypes.AttributeValueMemberNS{},
+	&streamstypes.AttributeValueMemberNULL{},
+	&streamstypes.AttributeValueMemberS{},
+	&streamstypes.AttributeValueMemberSS{},
 	&s3types.AnalyticsFilterMemberAnd{},
 	&s3types.AnalyticsFilterMemberPrefix{},
 	&s3types.AnalyticsFilterMemberTag{},
@@ -47,6 +58,7 @@ type unionIndex map[reflect.Type]map[string]reflect.Type
 // unionInterfaces lists the union interface types, used to match members.
 var unionInterfaces = []reflect.Type{
 	reflect.TypeFor[dynamodbtypes.AttributeValue](),
+	reflect.TypeFor[streamstypes.AttributeValue](),
 	reflect.TypeFor[s3types.AnalyticsFilter](),
 	reflect.TypeFor[s3types.MetricsFilter](),
 	reflect.TypeFor[s3types.ObjectEncryption](),

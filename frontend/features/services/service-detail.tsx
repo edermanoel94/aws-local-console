@@ -82,6 +82,9 @@ export function ServiceDetailView({ serviceId }: { serviceId: string }) {
 
   const s = service.data;
   const Console = serviceConsoles[s.id];
+  // Services without resources of their own (e.g. DynamoDB Streams) have no Resources tab.
+  const tabs = TABS.filter((t) => t.value !== "resources" || s.capabilities.includes("resources"));
+  const active: TabValue = tabs.some((t) => t.value === tab) ? tab : "overview";
 
   return (
     <>
@@ -113,15 +116,15 @@ export function ServiceDetailView({ serviceId }: { serviceId: string }) {
         }
       />
 
-      <Tabs<TabValue> label="Sections" value={tab} onChange={setTab} tabs={[...TABS]} className="mb-5" />
+      <Tabs<TabValue> label="Sections" value={active} onChange={setTab} tabs={tabs} className="mb-5" />
 
-      <div role="tabpanel" aria-label={TABS.find((t) => t.value === tab)?.label}>
-        {tab === "overview" && <OverviewTab service={s} onNavigate={setTab} />}
-        {tab === "resources" && (Console ? <Console serviceId={s.id} /> : <GenericResources service={s} />)}
-        {tab === "operations" && <OperationsTab service={s} />}
-        {tab === "api-explorer" && <ApiExplorer presetService={s.id} />}
-        {tab === "activity" && <LogsExplorer fixedService={s.id} />}
-        {tab === "coverage" && <CoverageTab service={s} />}
+      <div role="tabpanel" aria-label={tabs.find((t) => t.value === active)?.label}>
+        {active === "overview" && <OverviewTab service={s} onNavigate={setTab} />}
+        {active === "resources" && (Console ? <Console serviceId={s.id} /> : <GenericResources service={s} />)}
+        {active === "operations" && <OperationsTab service={s} />}
+        {active === "api-explorer" && <ApiExplorer presetService={s.id} />}
+        {active === "activity" && <LogsExplorer fixedService={s.id} />}
+        {active === "coverage" && <CoverageTab service={s} />}
       </div>
     </>
   );

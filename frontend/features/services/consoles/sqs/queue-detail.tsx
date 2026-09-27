@@ -10,7 +10,7 @@ import { useConsoleNav } from "../_shared/nav";
 import { TagsPanel } from "../_shared/tags-panel";
 import { SendReceive } from "./send-receive";
 import { EditQueueAttributes } from "./edit-attributes";
-import { LambdaTriggers } from "./lambda-triggers";
+import { LambdaTriggers } from "../_shared/lambda-triggers";
 import { isFifo, loadQueue, type QueueInfo } from "./sqs-utils";
 
 type QueueTab = "messages" | "configuration" | "triggers" | "tags";
@@ -67,7 +67,9 @@ export function QueueDetail({ queueName }: { queueName: string }) {
           <Tabs label="Queue sections" tabs={TABS} value={tab} onChange={(t) => navigate({ resource: queueName, detail: t })} />
           {tab === "messages" && <SendReceive queueName={queueName} queueUrl={queue.data.url} contentBasedDeduplication={queue.data.attributes.ContentBasedDeduplication === "true"} />}
           {tab === "configuration" && <EditQueueAttributes queueName={queueName} queue={queue.data} />}
-          {tab === "triggers" && <LambdaTriggers queueArn={queue.data.attributes.QueueArn ?? ""} />}
+          {tab === "triggers" && (
+            <LambdaTriggers eventSourceArn={queue.data.attributes.QueueArn ?? ""} description="Functions invoked with batches of messages from this queue. Add triggers from the Lambda console." />
+          )}
           {tab === "tags" && (
             <TagsPanel
               queryKey={["sqs-queue", queueName]}

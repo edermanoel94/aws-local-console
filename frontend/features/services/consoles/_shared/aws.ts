@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient, type UseQueryOptions } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient, type UseQueryOptions } from "@tanstack/react-query";
 import { executeOrThrow } from "@/lib/api";
 import { useRegion } from "@/hooks/use-region";
 import { toast } from "@/stores/toast";
@@ -36,6 +36,29 @@ export function useAwsQuery<T = unknown>(
     queryFn: () => makeExec(region)<T>(service, operation, input),
     ...options,
   });
+}
+
+/**
+ * Paginated read loaded page by page on demand ("Load more"), keyed like useAwsQuery.
+ * `next` extracts the continuation token from a page and `tokenField` is the input member that carries it.
+ * `restart()` drops the loaded pages and fetches the first one again.
+ */
+export function useAwsPagedQuery<T, Token>(
+  service: string,
+  operation: string,
+  input: Input,
+  pagination: { next: (page: T) => Token | null | undefined; tokenField: string },
+) {
+  const region = useRegion();
+  const qc = useQueryClient();
+  const queryKey = [CONSOLE_KEY, service, region, operation, input, "pages"];
+  const query = useInfiniteQuery({
+    queryKey,
+    queryFn: ({ pageParam }) => makeExec(region)<T>(service, operation, pageParam === undefined ? input : { ...input, [pagination.tokenField]: pageParam }),
+    initialPageParam: undefined as Token | undefined,
+    getNextPageParam: (page) => pagination.next(page) ?? undefined,
+  });
+  return { ...query, restart: () => qc.resetQueries({ queryKey, exact: true }) };
 }
 
 /** Arbitrary async read built from several operations (e.g. list + describe each). */
@@ -78,6 +101,15 @@ export function useConsoleAction<TVars = void, TResult = unknown>(opts: ActionOp
 export function nameFromArn(arn: string): string {
   const tail = arn.split(":").pop() ?? arn;
   return tail.split("/").pop() ?? tail;
+}
+
+/**
+ * Display name of an event source ARN: the table of a DynamoDB stream
+ * (arn:aws:dynamodb:r:a:table/orders/stream/2026-01-01T00:00:00.000 -> orders), else the last ARN segment.
+ */
+export function eventSourceName(arn: string): string {
+  const stream = /^arn:aws:dynamodb:[^:]*:[^:]*:table\/([^/]+)\/stream\//.exec(arn);
+  return stream ? stream[1] : nameFromArn(arn);
 }
 
 /** SQS queue URL -> queue name. */

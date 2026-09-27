@@ -55,7 +55,7 @@ type ServiceCategory =
   | "Application Integration" | "Management" | "Analytics";
 
 interface ServiceSummary {
-  id: string;                 // "s3", "sqs", "sns", "dynamodb", "lambda", "apigateway", "events", "logs", "iam", ...
+  id: string;                 // "s3", "sqs", "sns", "dynamodb", "dynamodbstreams", "lambda", "apigateway", "events", "logs", "iam", ...
   name: string;               // "Amazon S3"
   shortName: string;          // "S3"
   description: string;
@@ -302,6 +302,7 @@ Calling an undefined method/path returns 403 `{"message":"Missing Authentication
 | sqs | SQS | Application Integration | queue | yes |
 | sns | SNS | Application Integration | topic | yes |
 | dynamodb | DynamoDB | Database | table | yes |
+| dynamodbstreams | DynamoDB Streams | Database | - | no (API Explorer, and the Streams tab of the DynamoDB console) |
 | lambda | Lambda | Compute | function | yes |
 | apigateway | API Gateway | Networking | restapi | yes |
 | events | EventBridge | Application Integration | event-bus, rule | yes |

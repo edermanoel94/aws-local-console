@@ -29,9 +29,9 @@ export function useResources(query: { region?: string; service?: string; q?: str
   return useQuery({ queryKey: queryKeys.resources(query), queryFn: () => api.resources(query) });
 }
 
-export function useServiceResources(service: string) {
+export function useServiceResources(service: string, options?: { enabled?: boolean }) {
   const region = useRegion();
-  return useQuery({ queryKey: queryKeys.serviceResources(service, region), queryFn: () => api.serviceResources(service, region) });
+  return useQuery({ queryKey: queryKeys.serviceResources(service, region), queryFn: () => api.serviceResources(service, region), enabled: options?.enabled });
 }
 
 export function useLogs(query: { service?: string; operation?: string; status?: string; source?: string; q?: string; limit?: number }, refetchInterval?: number | false) {

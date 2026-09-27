@@ -11,7 +11,8 @@ import { formatRelative } from "@/lib/format";
 type Tab = "overview" | "resources" | "operations" | "api-explorer" | "activity" | "coverage";
 
 export function OverviewTab({ service: s, onNavigate }: { service: ServiceDetail; onNavigate: (tab: Tab) => void }) {
-  const resources = useServiceResources(s.id);
+  const hasResources = s.capabilities.includes("resources");
+  const resources = useServiceResources(s.id, { enabled: hasResources });
   const logs = useLogs({ service: s.id, limit: 6 });
   const total = s.coverage.supported + s.coverage.unsupported + s.coverage.untested;
 
@@ -39,24 +40,26 @@ export function OverviewTab({ service: s, onNavigate }: { service: ServiceDetail
           </dl>
         </Panel>
 
-        <Panel title="Resources" count={resources.data?.resources.length} actions={<LinkButton onClick={() => onNavigate("resources")}>Manage resources</LinkButton>}>
-          {resources.isPending ? (
-            <Loading />
-          ) : resources.isError ? (
-            <ErrorAlert error={resources.error} />
-          ) : resources.data.resources.length === 0 ? (
-            <EmptyState title={`No ${s.resourceTypes[0] ?? "resource"}s yet`} description={`Create one from the Resources tab.`} />
-          ) : (
-            <ul className="divide-y divide-aws-border">
-              {resources.data.resources.slice(0, 6).map((r) => (
-                <li key={r.id} className="flex items-center justify-between gap-3 py-2 text-sm">
-                  <span className="truncate font-bold">{r.name}</span>
-                  <span className="truncate font-mono text-[11px] text-aws-muted">{r.arn}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Panel>
+        {hasResources && (
+          <Panel title="Resources" count={resources.data?.resources.length} actions={<LinkButton onClick={() => onNavigate("resources")}>Manage resources</LinkButton>}>
+            {resources.isPending ? (
+              <Loading />
+            ) : resources.isError ? (
+              <ErrorAlert error={resources.error} />
+            ) : resources.data.resources.length === 0 ? (
+              <EmptyState title={`No ${s.resourceTypes[0] ?? "resource"}s yet`} description={`Create one from the Resources tab.`} />
+            ) : (
+              <ul className="divide-y divide-aws-border">
+                {resources.data.resources.slice(0, 6).map((r) => (
+                  <li key={r.id} className="flex items-center justify-between gap-3 py-2 text-sm">
+                    <span className="truncate font-bold">{r.name}</span>
+                    <span className="truncate font-mono text-[11px] text-aws-muted">{r.arn}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Panel>
+        )}
       </div>
 
       <div className="flex min-w-0 flex-col gap-4">

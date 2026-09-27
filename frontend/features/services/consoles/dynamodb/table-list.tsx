@@ -8,7 +8,7 @@ import { listAllPages } from "../_shared/paginate";
 import { ConsoleLink } from "../_shared/layout";
 import { useConsoleNav } from "../_shared/nav";
 import { ResourceTable } from "../_shared/resource-table";
-import { describeTable, tableKeys, TYPE_LABELS, type TableDescription } from "./ddb-types";
+import { describeKey, describeTable, tableKeys, type TableDescription } from "./ddb-types";
 
 export function StatusBadge({ status }: { status?: string }) {
   return <Badge tone={status === "ACTIVE" ? "green" : status === "DELETING" ? "red" : "orange"}>{status ? status[0] + status.slice(1).toLowerCase() : "-"}</Badge>;
@@ -53,14 +53,14 @@ export function TableList() {
             header: "Partition key",
             cell: (t) => {
               const k = tableKeys(t).partition;
-              return k.name ? `${k.name} (${TYPE_LABELS[k.type] ?? k.type})` : "-";
+              return k.name ? describeKey(k) : "-";
             },
           },
           {
             header: "Sort key",
             cell: (t) => {
               const k = tableKeys(t).sort;
-              return k ? `${k.name} (${TYPE_LABELS[k.type] ?? k.type})` : "-";
+              return k ? describeKey(k) : "-";
             },
           },
           { header: "Items", cell: (t) => t.ItemCount ?? "-", className: "text-right" },
