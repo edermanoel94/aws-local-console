@@ -164,7 +164,9 @@ func (d *Discoverer) Discover(ctx context.Context, query Query) List {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
+			started := time.Now()
 			found, err := d.byID[id](ctx, d, regions)
+			d.logger.Debug("resources discovered", "service", id, "regions", regions, "count", len(found), "durationMs", time.Since(started).Milliseconds())
 			mu.Lock()
 			defer mu.Unlock()
 			if err != nil {

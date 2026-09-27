@@ -13,6 +13,18 @@ const API_INTERNAL_URL = process.env.API_INTERNAL_URL ?? "http://localhost:8080"
 const STRIPPED_REQUEST_HEADERS = ["connection", "keep-alive", "proxy-connection", "transfer-encoding", "te", "trailer", "upgrade", "host", "content-length", "accept-encoding"];
 const STRIPPED_RESPONSE_HEADERS = ["connection", "keep-alive", "proxy-connection", "transfer-encoding", "te", "trailer", "upgrade", "content-length", "content-encoding"];
 
+/**
+ * Why fetch failed, e.g. "ECONNREFUSED 127.0.0.1:8080". Node wraps the socket error in `cause`, and when
+ * both IPv6 and IPv4 are refused that cause is an AggregateError whose own message is empty.
+ */
+function describeFailure(err: unknown): string {
+  let cause: unknown = err instanceof Error && err.cause ? err.cause : err;
+  if (cause instanceof AggregateError && cause.errors.length > 0) cause = cause.errors[0];
+  if (!(cause instanceof Error)) return String(cause);
+  const code = (cause as NodeJS.ErrnoException).code;
+  return cause.message || code || cause.name;
+}
+
 async function proxy(request: Request, { params }: RouteContext<"/api/v1/[...path]">): Promise<Response> {
   const { path } = await params;
   const search = new URL(request.url).search;
@@ -34,7 +46,8 @@ async function proxy(request: Request, { params }: RouteContext<"/api/v1/[...pat
     });
   } catch (err) {
     if (request.signal.aborted) return new Response(null, { status: 499 });
-    const cause = err instanceof Error ? (err.cause instanceof Error ? err.cause.message : err.message) : String(err);
+    const cause = describeFailure(err);
+    console.error(`[proxy] ERROR Go API unreachable at ${API_INTERNAL_URL} for ${request.method} /api/v1/${path.join("/")}: ${cause}`);
     return Response.json(
       { error: { code: "ApiUnreachable", message: `Go API unreachable at ${API_INTERNAL_URL}: ${cause}` } },
       { status: 502 },

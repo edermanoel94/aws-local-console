@@ -18,6 +18,7 @@ import (
 	"github.com/edermanoel94/aws-local-console/backend/internal/cli"
 	"github.com/edermanoel94/aws-local-console/backend/internal/coverage"
 	"github.com/edermanoel94/aws-local-console/backend/internal/environments"
+	"github.com/edermanoel94/aws-local-console/backend/internal/logging"
 	"github.com/edermanoel94/aws-local-console/backend/internal/operations"
 	"github.com/edermanoel94/aws-local-console/backend/internal/resources"
 	"github.com/edermanoel94/aws-local-console/backend/internal/services"
@@ -26,12 +27,12 @@ import (
 const auditCapacity = 2000
 
 func main() {
-	level := slog.LevelInfo
-	if os.Getenv("LOG_LEVEL") == "debug" {
-		level = slog.LevelDebug
-	}
-	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: level}))
+	level, levelErr := logging.ParseLevel(os.Getenv("LOG_LEVEL"))
+	logger := logging.New(os.Stdout, level)
 	slog.SetDefault(logger)
+	if levelErr != nil {
+		logger.Warn("invalid LOG_LEVEL, logging at INFO", "error", levelErr)
+	}
 
 	cfg := environments.Load()
 	factory := awsfloci.NewFactory(cfg)
@@ -57,7 +58,7 @@ func main() {
 		Discoverer:   discoverer,
 		Architecture: architecture.NewBuilder(discoverer),
 		CLI:          cli.NewRunner(engine, registry, cfg.DefaultRegion),
-		Floci:        awsfloci.NewFlociMonitor(factory, 5*time.Second),
+		Floci:        awsfloci.NewFlociMonitor(factory, 5*time.Second, logger),
 		Logger:       logger,
 	})
 
@@ -71,7 +72,7 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	go func() {
-		logger.Info("AWS Local Console API listening", "addr", server.Addr, "floci", cfg.FlociEndpoint, "region", cfg.DefaultRegion, "corsOrigins", cfg.CORSOrigins)
+		logger.Info("AWS Local Console API listening", "addr", server.Addr, "floci", cfg.FlociEndpoint, "region", cfg.DefaultRegion, "corsOrigins", cfg.CORSOrigins, "logLevel", logging.LevelName(level))
 		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			logger.Error("server failed", "error", err)
 			os.Exit(1)
