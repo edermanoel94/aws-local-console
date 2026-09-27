@@ -12,7 +12,7 @@ export default function ApiExplorerPage() {
     <>
       <PageHeader
         title="API Explorer"
-        description="Execute any AWS SDK operation against Floci and inspect the raw request and response."
+        description="Execute any AWS SDK operation and inspect the raw request and response."
         breadcrumbs={[{ label: "AWS Local Console", href: "/dashboard" }, { label: "API Explorer" }]}
       />
       <Suspense fallback={<Loading />}>

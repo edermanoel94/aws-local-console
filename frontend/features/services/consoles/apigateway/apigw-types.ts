@@ -1,4 +1,4 @@
-import { ACCOUNT_ID } from "../_shared/aws";
+import type { TargetKind } from "@/types/api";
 
 export interface RestApi {
   Id: string;
@@ -57,12 +57,13 @@ export function functionArnFromUri(uri = ""): string | null {
   return m ? m[1] : null;
 }
 
-export function executeApiArn(region: string, apiId: string, method: string, path: string) {
-  return `arn:aws:execute-api:${region}:${ACCOUNT_ID}:${apiId}/*/${method === "ANY" ? "*" : method}${path}`;
+export function executeApiArn(region: string, accountId: string, apiId: string, method: string, path: string) {
+  return `arn:aws:execute-api:${region}:${accountId}:${apiId}/*/${method === "ANY" ? "*" : method}${path}`;
 }
 
-/** Stage URL on Floci (path-style, usable with curl from the host). */
-export function stageUrl(apiId: string, stage: string) {
+/** Stage invoke URL: path-style on Floci (usable with curl from the host), the execute-api host on AWS. */
+export function stageUrl(target: TargetKind | undefined, region: string, apiId: string, stage: string) {
+  if (target === "aws") return `https://${apiId}.execute-api.${region}.${region.startsWith("cn-") ? "amazonaws.com.cn" : "amazonaws.com"}/${stage}`;
   return `http://localhost:4566/restapis/${apiId}/${stage}/_user_request_`;
 }
 

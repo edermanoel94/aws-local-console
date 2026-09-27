@@ -6,7 +6,7 @@ import { Star } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { usePreferences } from "@/stores/preferences";
 import { useHydrated } from "@/hooks/use-hydrated";
-import { useServices } from "@/hooks/use-queries";
+import { useServices, useTarget } from "@/hooks/use-queries";
 import { ServiceIcon, SERVICE_SHORT_NAMES } from "@/components/aws/service-icon";
 import { NAV_ITEMS, isActive } from "./navigation";
 
@@ -28,6 +28,7 @@ export function Sidebar({ mode }: { mode: SidebarMode }) {
   const hydrated = useHydrated();
   const favorites = usePreferences((s) => s.favorites);
   const { data: services } = useServices();
+  const target = useTarget();
   const visibleFavorites = hydrated ? favorites : [];
 
   return (
@@ -96,7 +97,19 @@ export function Sidebar({ mode }: { mode: SidebarMode }) {
       </nav>
 
       <div className={cn("mt-auto border-t border-aws-border px-5 py-3 text-[11px] text-aws-muted", classes.expandedOnly)}>
-        Running on <span className="font-bold text-aws-ink">Floci</span> · local AWS
+        {target.isAws ? (
+          <>
+            <span className="font-bold text-aws-ink">AWS</span> account
+            {target.accountId && <> · {target.accountId}</>}
+          </>
+        ) : target.isFloci ? (
+          <>
+            Running on <span className="font-bold text-aws-ink">Floci</span> · local AWS
+          </>
+        ) : (
+          // Keeps the footer height while the target is loading.
+          <>&nbsp;</>
+        )}
       </div>
     </aside>
   );

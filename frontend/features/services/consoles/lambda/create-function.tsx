@@ -1,18 +1,20 @@
 "use client";
 
-import { useState, type ChangeEvent } from "react";
+import { useEffect, useState, type ChangeEvent } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Panel, SelectField, TextField } from "@/components/ui";
 import { useRegion } from "@/hooks/use-region";
+import { useTarget } from "@/hooks/use-queries";
 import { useConsoleAction } from "../_shared/aws";
-import { CodeField, KeyValueEditor, fromKeyValues, type KeyValue } from "../_shared/controls";
+import { CodeField, KeyValueEditor, SuggestField, fromKeyValues, type KeyValue } from "../_shared/controls";
 import { FormPage } from "../_shared/layout";
 import { useConsoleNav } from "../_shared/nav";
+import { useLambdaRoleOptions } from "../_shared/pickers";
 import { requiredInt } from "../_shared/validation";
 import type { FunctionConfiguration } from "./lambda-types";
-import { codeFileName, defaultCode, defaultHandler, DEFAULT_ROLE, ENV_KEY_PATTERN, rememberCode, RUNTIMES } from "./runtimes";
+import { codeFileName, defaultCode, defaultHandler, ENV_KEY_PATTERN, FLOCI_DEFAULT_ROLE, rememberCode, RUNTIMES } from "./runtimes";
 
 const schema = z.object({
   name: z
@@ -48,6 +50,8 @@ export function validateEnvironment(rows: KeyValue[]): string | undefined {
 export function CreateFunctionPage() {
   const { navigate } = useConsoleNav();
   const region = useRegion();
+  const { isFloci } = useTarget();
+  const roles = useLambdaRoleOptions();
   const [env, setEnv] = useState<KeyValue[]>([]);
   const [envError, setEnvError] = useState<string>();
   const initialRuntime = RUNTIMES[0].value;
@@ -58,13 +62,19 @@ export function CreateFunctionPage() {
       runtime: initialRuntime,
       handler: defaultHandler(initialRuntime),
       code: defaultCode(initialRuntime),
-      role: DEFAULT_ROLE,
+      role: isFloci ? FLOCI_DEFAULT_ROLE : "",
       description: "",
       memory: "128",
       timeout: "3",
     },
   });
   const [runtime, handler] = useWatch({ control: form.control, name: ["runtime", "handler"] });
+
+  // The target may answer after the form mounted: prefill the Floci role then, unless the user typed one.
+  // AWS has no role that is sure to exist, so the field stays empty and suggests the account's Lambda roles.
+  useEffect(() => {
+    if (isFloci && !form.getValues("role") && !form.getFieldState("role").isDirty) form.setValue("role", FLOCI_DEFAULT_ROLE);
+  }, [isFloci, form]);
 
   const create = useConsoleAction<FormValues, FunctionConfiguration>({
     run: (v, exec) => {
@@ -104,7 +114,7 @@ export function CreateFunctionPage() {
     <FormPage
       crumbs={[{ label: "Functions", to: {} }, { label: "Create function" }]}
       title="Create function"
-      description="Author a function from scratch with inline code. The code is packaged as a .zip archive and deployed to Floci."
+      description="Author a function from scratch with inline code. The code is packaged as a .zip archive and deployed."
       onSubmit={form.handleSubmit((v) => {
         const invalid = validateEnvironment(env);
         setEnvError(invalid);
@@ -132,7 +142,14 @@ export function CreateFunctionPage() {
             onChange={onRuntimeChange}
           />
           <TextField label="Handler" description="file.function that Lambda calls to start execution." error={errors.handler?.message} {...form.register("handler")} />
-          <TextField label="Execution role" description="IAM role ARN assumed by the function." error={errors.role?.message} {...form.register("role")} />
+          <SuggestField
+            label="Execution role"
+            description="IAM role ARN assumed by the function."
+            placeholder="arn:aws:iam::123456789012:role/my-function-role"
+            suggestions={roles.data ?? []}
+            error={errors.role?.message}
+            {...form.register("role")}
+          />
           <TextField label="Description - optional" className="md:col-span-2" error={errors.description?.message} {...form.register("description")} />
         </div>
       </Panel>
@@ -146,7 +163,11 @@ export function CreateFunctionPage() {
               value={field.value}
               onChange={field.onChange}
               fileName={codeFileName(handler, runtime)}
-              description="The file name is derived from the handler. The AWS SDK and AWS_ENDPOINT_URL are available inside the function."
+              description={
+                isFloci
+                  ? "The file name is derived from the handler. The AWS SDK and AWS_ENDPOINT_URL are available inside the function."
+                  : "The file name is derived from the handler. The AWS SDK is available inside the function."
+              }
               error={errors.code?.message}
               rows={16}
             />

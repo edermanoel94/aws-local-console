@@ -98,7 +98,7 @@ func discoverSQS(ctx context.Context, d *Discoverer, region string) ([]Resource,
 	result := []Resource{}
 	forEach(urls, func(queueURL string) {
 		name := queueURL[strings.LastIndex(queueURL, "/")+1:]
-		resource := newResource("sqs", "queue", region, name, fmt.Sprintf("arn:aws:sqs:%s:%s:%s", region, d.account, name))
+		resource := newResource("sqs", "queue", region, name, fmt.Sprintf("arn:aws:sqs:%s:%s:%s", region, d.Account(), name))
 		resource.Attributes["url"] = queueURL
 		attributes, err := client.GetQueueAttributes(ctx, &sqs.GetQueueAttributesInput{
 			QueueUrl: sdkaws.String(queueURL), AttributeNames: []sqstypes.QueueAttributeName{sqstypes.QueueAttributeNameAll},
@@ -191,7 +191,7 @@ func discoverDynamoDB(ctx context.Context, d *Discoverer, region string) ([]Reso
 	var mu sync.Mutex
 	result := []Resource{}
 	forEach(names, func(name string) {
-		resource := newResource("dynamodb", "table", region, name, fmt.Sprintf("arn:aws:dynamodb:%s:%s:table/%s", region, d.account, name))
+		resource := newResource("dynamodb", "table", region, name, fmt.Sprintf("arn:aws:dynamodb:%s:%s:table/%s", region, d.Account(), name))
 		if described, err := client.DescribeTable(ctx, &dynamodb.DescribeTableInput{TableName: sdkaws.String(name)}); err == nil && described.Table != nil {
 			table := described.Table
 			if arn := sdkaws.ToString(table.TableArn); arn != "" {
@@ -277,11 +277,6 @@ func discoverLambda(ctx context.Context, d *Discoverer, region string) ([]Resour
 	return result, nil
 }
 
-// InvokeURL is the Floci URL that executes a deployed REST API stage.
-func InvokeURL(endpoint, restAPIID, stage string) string {
-	return fmt.Sprintf("%s/restapis/%s/%s/_user_request_", strings.TrimRight(endpoint, "/"), restAPIID, stage)
-}
-
 func discoverAPIGateway(ctx context.Context, d *Discoverer, region string) ([]Resource, error) {
 	client := services.Typed[*apigateway.Client](d.registry, "apigateway", region)
 	result := []Resource{}
@@ -314,7 +309,7 @@ func discoverAPIGateway(ctx context.Context, d *Discoverer, region string) ([]Re
 				stages = append(stages, map[string]any{
 					"stageName":    name,
 					"deploymentId": sdkaws.ToString(stage.DeploymentId),
-					"invokeUrl":    InvokeURL(sdkaws.ToString(client.Options().BaseEndpoint), id, name),
+					"invokeUrl":    d.registry.Factory().APIGatewayInvokeURL(region, id, name),
 				})
 			}
 		}
@@ -442,7 +437,7 @@ func discoverLogs(ctx context.Context, d *Discoverer, region string) ([]Resource
 				arn = strings.TrimSuffix(sdkaws.ToString(group.Arn), ":*")
 			}
 			if arn == "" {
-				arn = fmt.Sprintf("arn:aws:logs:%s:%s:log-group:%s", region, d.account, name)
+				arn = fmt.Sprintf("arn:aws:logs:%s:%s:log-group:%s", region, d.Account(), name)
 			}
 			resource := newResource("logs", "log-group", region, name, arn)
 			if group.CreationTime != nil {

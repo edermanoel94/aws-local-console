@@ -10,7 +10,7 @@ const jetbrainsMono = JetBrains_Mono({ variable: "--font-jetbrains-mono", subset
 
 export const metadata: Metadata = {
   title: "AWS Local Console",
-  description: "Web console for AWS services running on Floci",
+  description: "Web console for AWS services, on a local Floci emulator or a real AWS account",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

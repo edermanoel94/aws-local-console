@@ -1,7 +1,7 @@
 "use client";
 
 import { SelectField } from "@/components/ui";
-import type { Exec } from "../_shared/aws";
+import { grantLambdaInvoke, type Exec } from "../_shared/aws";
 import { useFunctionOptions, useQueueOptions, useTopicOptions } from "../_shared/pickers";
 import { TARGET_TYPES, type TargetType } from "./events-types";
 
@@ -46,8 +46,8 @@ export function TargetFields({
   );
 }
 
-/** Adds a target to a rule; Lambda targets also get an invoke permission (best effort, optional on Floci). */
-export async function addTarget(exec: Exec, rule: { name: string; bus: string; arn?: string }, targetArn: string, existingIds: string[]) {
+/** Adds a target to a rule; Lambda targets also get an invoke permission (required on AWS, best effort on Floci). */
+export async function addTarget(exec: Exec, rule: { name: string; bus: string; arn?: string }, targetArn: string, existingIds: string[], permissionRequired: boolean) {
   let n = existingIds.length + 1;
   while (existingIds.includes(`target-${n}`)) n++;
   const out = await exec<{ FailedEntryCount?: number; FailedEntries?: { ErrorCode?: string; ErrorMessage?: string }[] | null }>("events", "PutTargets", {
@@ -60,16 +60,11 @@ export async function addTarget(exec: Exec, rule: { name: string; bus: string; a
     throw new Error(`${failure?.ErrorCode ?? "PutTargetsFailed"}: ${failure?.ErrorMessage ?? "The target could not be added."}`);
   }
   if (targetArn.startsWith("arn:aws:lambda:") && rule.arn) {
-    try {
-      await exec("lambda", "AddPermission", {
-        FunctionName: targetArn,
-        StatementId: `events-${rule.name}-${Date.now()}`.slice(0, 100),
-        Action: "lambda:InvokeFunction",
-        Principal: "events.amazonaws.com",
-        SourceArn: rule.arn,
-      });
-    } catch {
-      // Resource-based policies are optional on Floci.
-    }
+    await grantLambdaInvoke(exec, permissionRequired, {
+      FunctionName: targetArn,
+      StatementId: `events-${rule.name}-${Date.now()}`.slice(0, 100),
+      Principal: "events.amazonaws.com",
+      SourceArn: rule.arn,
+    });
   }
 }

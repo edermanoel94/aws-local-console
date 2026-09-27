@@ -11,7 +11,7 @@ import { Badge, Button, ErrorAlert, Loading, Panel, SelectField } from "@/compon
 import { JsonEditor, parseJson } from "@/components/editors/json-editor";
 import { RequestInspector, fromExecuteResponse } from "@/components/aws/request-inspector";
 import { CoverageBadge } from "@/components/aws/status-badges";
-import { useRegions, useService, useServices } from "@/hooks/use-queries";
+import { useRegions, useService, useServices, useTarget } from "@/hooks/use-queries";
 import { useRegion } from "@/hooks/use-region";
 import { toKebabCase } from "@/lib/format";
 import { useUpdateSearchParams } from "@/hooks/use-update-search-params";
@@ -106,7 +106,7 @@ export function ApiExplorer({ presetService }: ApiExplorerProps) {
       }}
     >
       <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
-        <Panel title="Request" description="Choose an operation, adjust the JSON input and execute it against Floci.">
+        <Panel title="Request" description="Choose an operation, adjust the JSON input and execute it.">
           <div className="flex flex-col gap-4">
             <div className={`grid grid-cols-1 gap-3 ${embedded ? "md:grid-cols-2" : "md:grid-cols-3"}`}>
               {!embedded && (
@@ -187,6 +187,7 @@ export function ApiExplorer({ presetService }: ApiExplorerProps) {
 }
 
 function OperationDetails({ operation, loading, service }: { operation?: OperationInfo; loading: boolean; service: string }) {
+  const { isFloci } = useTarget();
   return (
     <Panel title="Operation details">
       {loading ? (
@@ -198,7 +199,7 @@ function OperationDetails({ operation, loading, service }: { operation?: Operati
           <div>
             <p className="font-mono text-[15px] font-bold break-all">{operation.name}</p>
             <div className="mt-2 flex flex-wrap gap-1.5">
-              <CoverageBadge coverage={operation.coverage} />
+              {isFloci && <CoverageBadge coverage={operation.coverage} />}
               <Badge tone={operation.mutating ? "orange" : "blue"}>{operation.mutating ? "Write" : "Read"}</Badge>
             </div>
           </div>

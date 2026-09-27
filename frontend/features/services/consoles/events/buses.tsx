@@ -7,7 +7,7 @@ import { z } from "zod";
 import { Plus } from "lucide-react";
 import { Badge, Button, ConfirmDeleteDialog, Panel, TextField } from "@/components/ui";
 import { useRegion } from "@/hooks/use-region";
-import { ACCOUNT_ID, useConsoleAction } from "../_shared/aws";
+import { useAccountId, useConsoleAction } from "../_shared/aws";
 import { CopyableText } from "../_shared/controls";
 import { formatDateTime } from "../_shared/format";
 import { ConsoleHeader, ConsoleLink, DetailsGrid, FormPage } from "../_shared/layout";
@@ -62,13 +62,14 @@ export function BusDetail({ busName }: { busName: string }) {
   const region = useRegion();
   const buses = useEventBuses();
   const bus = buses.data?.EventBuses?.find((b) => b.Name === busName);
+  const accountId = useAccountId();
   const [deleting, setDeleting] = useState(false);
   const remove = useConsoleAction({
     run: (_: void, exec) => exec("events", "DeleteEventBus", { Name: busName }),
     successMessage: () => `Event bus ${busName} deleted`,
     onSuccess: () => navigate({ view: "buses" }),
   });
-  const arn = bus?.Arn ?? `arn:aws:events:${region}:${ACCOUNT_ID}:event-bus/${busName}`;
+  const arn = bus?.Arn ?? `arn:aws:events:${region}:${accountId}:event-bus/${busName}`;
 
   return (
     <>

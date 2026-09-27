@@ -11,11 +11,11 @@ import (
 	"time"
 
 	"github.com/edermanoel94/aws-local-console/backend/internal/audit"
-	"github.com/edermanoel94/aws-local-console/backend/internal/resources"
 )
 
-// apiGatewayInvoke calls a deployed REST API stage through Floci's
-// user-request endpoint: {FLOCI}/restapis/{id}/{stage}/_user_request_{path}.
+// apiGatewayInvoke calls a deployed REST API stage with a plain HTTP request
+// to its invoke URL: on Floci {FLOCI}/restapis/{id}/{stage}/_user_request_{path},
+// on AWS https://{id}.execute-api.{region}.amazonaws.com/{stage}{path}.
 // Floci does not implement TestInvokeMethod (HTTP 406), so this is how the
 // console executes APIs. The call is audited as apigateway "Invoke".
 func (s *Server) apiGatewayInvoke(w http.ResponseWriter, r *http.Request) {
@@ -49,7 +49,7 @@ func (s *Server) apiGatewayInvoke(w http.ResponseWriter, r *http.Request) {
 	if !strings.HasPrefix(req.Path, "/") {
 		req.Path = "/" + req.Path
 	}
-	target := resources.InvokeURL(s.Config.FlociEndpoint, url.PathEscape(req.RestAPIID), url.PathEscape(req.Stage)) + req.Path
+	target := s.Factory.APIGatewayInvokeURL(req.Region, url.PathEscape(req.RestAPIID), url.PathEscape(req.Stage)) + req.Path
 
 	input := map[string]any{"restApiId": req.RestAPIID, "stage": req.Stage, "method": req.Method, "path": req.Path, "region": req.Region}
 	if len(req.Headers) > 0 {
@@ -97,7 +97,7 @@ func (s *Server) apiGatewayInvoke(w http.ResponseWriter, r *http.Request) {
 		entry.ErrorCode = "NetworkError"
 		entry.ErrorMessage = err.Error()
 		s.Audit.Record(entry, true)
-		writeError(w, http.StatusBadGateway, "FlociUnreachable", "could not reach Floci: "+err.Error())
+		writeError(w, http.StatusBadGateway, "TargetUnreachable", "could not reach "+s.Config.Target.DisplayName()+": "+err.Error())
 		return
 	}
 	defer resp.Body.Close()

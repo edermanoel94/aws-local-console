@@ -9,7 +9,7 @@ export default function ArchitecturePage() {
     <>
       <PageHeader
         title="Architecture"
-        description="Resources and the relationships discovered from real Floci state."
+        description="Resources and the relationships discovered from their real state."
         breadcrumbs={[{ label: "AWS Local Console", href: "/dashboard" }, { label: "Architecture" }]}
       />
       <ArchitectureView />

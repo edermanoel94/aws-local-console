@@ -19,7 +19,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/sns"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 
-	awsfloci "github.com/edermanoel94/aws-local-console/backend/internal/aws"
+	consoleaws "github.com/edermanoel94/aws-local-console/backend/internal/aws"
+	"github.com/edermanoel94/aws-local-console/backend/internal/environments"
 )
 
 // Category groups services in the UI.
@@ -47,7 +48,7 @@ const (
 // Definition describes one registered service.
 type Definition struct {
 	ID            string
-	FlociID       string // key in Floci's /_floci/health services map
+	FlociID       string // key in Floci's /_floci/health services map (TargetFloci only)
 	Name          string
 	ShortName     string
 	Description   string
@@ -57,7 +58,7 @@ type Definition struct {
 	// Global services (IAM) have a single endpoint and no regional resources.
 	Global bool
 	// NewClient builds the SDK client, e.g. s3.NewFromConfig.
-	NewClient awsfloci.ClientBuilder
+	NewClient consoleaws.ClientBuilder
 }
 
 var consoleCapabilities = []string{CapabilityConsole, CapabilityResources, CapabilityAPIExplorer}
@@ -70,11 +71,11 @@ var definitions = []Definition{
 		Category:      CategoryStorage,
 		ResourceTypes: []string{"bucket"},
 		Capabilities:  consoleCapabilities,
-		NewClient: func(cfg sdkaws.Config) any {
+		NewClient: func(cfg sdkaws.Config, target environments.Target) any {
 			return s3.NewFromConfig(cfg, func(o *s3.Options) {
 				// Floci resolves itself as localhost.floci.io; virtual-host
-				// addressing would require wildcard DNS, so use path style.
-				o.UsePathStyle = true
+				// addressing would require wildcard DNS, so use path style there.
+				o.UsePathStyle = target == environments.TargetFloci
 			})
 		},
 	},
@@ -84,7 +85,7 @@ var definitions = []Definition{
 		Category:      CategoryApplicationIntegration,
 		ResourceTypes: []string{"queue"},
 		Capabilities:  consoleCapabilities,
-		NewClient:     func(cfg sdkaws.Config) any { return sqs.NewFromConfig(cfg) },
+		NewClient:     func(cfg sdkaws.Config, _ environments.Target) any { return sqs.NewFromConfig(cfg) },
 	},
 	{
 		ID: "sns", FlociID: "sns", Name: "Amazon Simple Notification Service", ShortName: "SNS",
@@ -92,7 +93,7 @@ var definitions = []Definition{
 		Category:      CategoryApplicationIntegration,
 		ResourceTypes: []string{"topic"},
 		Capabilities:  consoleCapabilities,
-		NewClient:     func(cfg sdkaws.Config) any { return sns.NewFromConfig(cfg) },
+		NewClient:     func(cfg sdkaws.Config, _ environments.Target) any { return sns.NewFromConfig(cfg) },
 	},
 	{
 		ID: "dynamodb", FlociID: "dynamodb", Name: "Amazon DynamoDB", ShortName: "DynamoDB",
@@ -100,16 +101,16 @@ var definitions = []Definition{
 		Category:      CategoryDatabase,
 		ResourceTypes: []string{"table"},
 		Capabilities:  consoleCapabilities,
-		NewClient:     func(cfg sdkaws.Config) any { return dynamodb.NewFromConfig(cfg) },
+		NewClient:     func(cfg sdkaws.Config, _ environments.Target) any { return dynamodb.NewFromConfig(cfg) },
 	},
 	{
-		// Streams are served by Floci's DynamoDB service and browsed from the DynamoDB console's Streams tab.
+		// Browsed from the DynamoDB console's Streams tab; Floci serves streams from its DynamoDB service.
 		ID: "dynamodbstreams", FlociID: "dynamodb", Name: "Amazon DynamoDB Streams", ShortName: "DynamoDB Streams",
 		Description:   "Time-ordered change records of DynamoDB table items.",
 		Category:      CategoryDatabase,
 		ResourceTypes: []string{},
 		Capabilities:  []string{CapabilityAPIExplorer},
-		NewClient:     func(cfg sdkaws.Config) any { return dynamodbstreams.NewFromConfig(cfg) },
+		NewClient:     func(cfg sdkaws.Config, _ environments.Target) any { return dynamodbstreams.NewFromConfig(cfg) },
 	},
 	{
 		ID: "lambda", FlociID: "lambda", Name: "AWS Lambda", ShortName: "Lambda",
@@ -117,7 +118,7 @@ var definitions = []Definition{
 		Category:      CategoryCompute,
 		ResourceTypes: []string{"function"},
 		Capabilities:  consoleCapabilities,
-		NewClient:     func(cfg sdkaws.Config) any { return lambda.NewFromConfig(cfg) },
+		NewClient:     func(cfg sdkaws.Config, _ environments.Target) any { return lambda.NewFromConfig(cfg) },
 	},
 	{
 		ID: "apigateway", FlociID: "apigateway", Name: "Amazon API Gateway", ShortName: "API Gateway",
@@ -125,7 +126,7 @@ var definitions = []Definition{
 		Category:      CategoryNetworking,
 		ResourceTypes: []string{"restapi"},
 		Capabilities:  consoleCapabilities,
-		NewClient:     func(cfg sdkaws.Config) any { return apigateway.NewFromConfig(cfg) },
+		NewClient:     func(cfg sdkaws.Config, _ environments.Target) any { return apigateway.NewFromConfig(cfg) },
 	},
 	{
 		ID: "apigatewayv2", FlociID: "apigatewayv2", Name: "Amazon API Gateway V2", ShortName: "API Gateway V2",
@@ -133,7 +134,7 @@ var definitions = []Definition{
 		Category:      CategoryNetworking,
 		ResourceTypes: []string{"api"},
 		Capabilities:  explorerCapabilities,
-		NewClient:     func(cfg sdkaws.Config) any { return apigatewayv2.NewFromConfig(cfg) },
+		NewClient:     func(cfg sdkaws.Config, _ environments.Target) any { return apigatewayv2.NewFromConfig(cfg) },
 	},
 	{
 		ID: "events", FlociID: "events", Name: "Amazon EventBridge", ShortName: "EventBridge",
@@ -141,7 +142,7 @@ var definitions = []Definition{
 		Category:      CategoryApplicationIntegration,
 		ResourceTypes: []string{"event-bus", "rule"},
 		Capabilities:  consoleCapabilities,
-		NewClient:     func(cfg sdkaws.Config) any { return eventbridge.NewFromConfig(cfg) },
+		NewClient:     func(cfg sdkaws.Config, _ environments.Target) any { return eventbridge.NewFromConfig(cfg) },
 	},
 	{
 		ID: "logs", FlociID: "logs", Name: "Amazon CloudWatch Logs", ShortName: "CloudWatch Logs",
@@ -149,7 +150,7 @@ var definitions = []Definition{
 		Category:      CategoryManagement,
 		ResourceTypes: []string{"log-group"},
 		Capabilities:  explorerCapabilities,
-		NewClient:     func(cfg sdkaws.Config) any { return cloudwatchlogs.NewFromConfig(cfg) },
+		NewClient:     func(cfg sdkaws.Config, _ environments.Target) any { return cloudwatchlogs.NewFromConfig(cfg) },
 	},
 	{
 		ID: "iam", FlociID: "iam", Name: "AWS Identity and Access Management", ShortName: "IAM",
@@ -158,19 +159,19 @@ var definitions = []Definition{
 		ResourceTypes: []string{"role"},
 		Capabilities:  explorerCapabilities,
 		Global:        true,
-		NewClient:     func(cfg sdkaws.Config) any { return iam.NewFromConfig(cfg) },
+		NewClient:     func(cfg sdkaws.Config, _ environments.Target) any { return iam.NewFromConfig(cfg) },
 	},
 }
 
 // Registry resolves service definitions and their clients.
 type Registry struct {
-	factory *awsfloci.Factory
+	factory *consoleaws.Factory
 	byID    map[string]*Definition
 	ordered []*Definition
 }
 
 // NewRegistry builds the registry.
-func NewRegistry(factory *awsfloci.Factory) *Registry {
+func NewRegistry(factory *consoleaws.Factory) *Registry {
 	r := &Registry{factory: factory, byID: map[string]*Definition{}}
 	for i := range definitions {
 		def := &definitions[i]
@@ -180,6 +181,9 @@ func NewRegistry(factory *awsfloci.Factory) *Registry {
 	sort.SliceStable(r.ordered, func(i, j int) bool { return r.ordered[i].ID < r.ordered[j].ID })
 	return r
 }
+
+// Factory returns the client factory.
+func (r *Registry) Factory() *consoleaws.Factory { return r.factory }
 
 // All returns every definition sorted by id.
 func (r *Registry) All() []*Definition { return r.ordered }

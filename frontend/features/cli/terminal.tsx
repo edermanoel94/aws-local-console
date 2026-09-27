@@ -137,7 +137,7 @@ export default function CliTerminal({ handleRef, onTranscript, onClearTranscript
       // container not measurable yet
     }
 
-    const intro = "AWS Local Console CLI - commands run against Floci through the Go API.\r\nType \x1b[1mhelp\x1b[0m for the supported syntax, \x1b[1mclear\x1b[0m to clear the screen.\r\n";
+    const intro = "AWS Local Console CLI - commands run through the Go API.\r\nType \x1b[1mhelp\x1b[0m for the supported syntax, \x1b[1mclear\x1b[0m to clear the screen.\r\n";
     term.write(`\x1b[2m${intro}\x1b[0m\r\n`);
     redraw();
     term.focus();

@@ -107,6 +107,9 @@ Floci
 AWS Service
 ```
 
+Opcionalmente, com `CONSOLE_TARGET=aws`, o mesmo fluxo opera uma única conta AWS real no lugar do Floci, com as credenciais do ambiente da Go API (cadeia padrão do AWS SDK).
+Uma instância da console opera sempre um único alvo e uma única conta.
+
 Por exemplo:
 
 ```text

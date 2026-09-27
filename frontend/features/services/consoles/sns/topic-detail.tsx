@@ -7,7 +7,7 @@ import { z } from "zod";
 import { Plus, Send } from "lucide-react";
 import { Badge, Button, ConfirmDeleteDialog, Dialog, ErrorAlert, Loading, Panel, SelectField, Tabs, TextAreaField } from "@/components/ui";
 import { useRegion } from "@/hooks/use-region";
-import { ACCOUNT_ID, useAwsLoader, useAwsQuery, useConsoleAction } from "../_shared/aws";
+import { useAccountId, useAwsLoader, useAwsQuery, useConsoleAction, usePlaceholderAccountId } from "../_shared/aws";
 import { Checkbox, ConfirmDialog, CopyableText, RemoveIconButton, SuggestField } from "../_shared/controls";
 import { ConsoleHeader, ConsoleLink, DetailsGrid } from "../_shared/layout";
 import { useConsoleNav } from "../_shared/nav";
@@ -38,7 +38,8 @@ function isJsonObject(value: string): boolean {
 
 export function useTopicArn(name: string) {
   const region = useRegion();
-  return `arn:aws:sns:${region}:${ACCOUNT_ID}:${name}`;
+  const accountId = useAccountId();
+  return `arn:aws:sns:${region}:${accountId}:${name}`;
 }
 
 export function TopicDetail({ topicName }: { topicName: string }) {
@@ -87,7 +88,7 @@ export function TopicDetail({ topicName }: { topicName: string }) {
                 { label: "ARN", value: <CopyableText value={topicArn} label="Copy topic ARN" /> },
                 { label: "Type", value: a.FifoTopic === "true" ? "FIFO" : "Standard" },
                 { label: "Display name", value: a.DisplayName },
-                { label: "Topic owner", value: a.Owner ?? ACCOUNT_ID },
+                { label: "Topic owner", value: a.Owner },
                 { label: "Subscriptions confirmed", value: a.SubscriptionsConfirmed },
                 { label: "Subscriptions pending", value: a.SubscriptionsPending },
                 { label: "Subscriptions deleted", value: a.SubscriptionsDeleted },
@@ -249,6 +250,8 @@ function CreateSubscriptionDialog({ topicArn, onClose }: { topicArn: string; onC
   const protocol = useWatch({ control: form.control, name: "protocol" });
   const queues = useQueueOptions(protocol === "sqs");
   const functions = useFunctionOptions(protocol === "lambda");
+  const region = useRegion();
+  const placeholderAccount = usePlaceholderAccountId();
   const suggestions = (protocol === "sqs" ? queues.data : protocol === "lambda" ? functions.data : []) ?? [];
 
   const create = useConsoleAction<SubscriptionValues>({
@@ -288,7 +291,7 @@ function CreateSubscriptionDialog({ topicArn, onClose }: { topicArn: string; onC
         <SelectField label="Protocol" options={PROTOCOLS} {...form.register("protocol", { onChange: () => form.setValue("endpoint", "") })} />
         <SuggestField
           label="Endpoint"
-          placeholder={protocol === "sqs" ? "arn:aws:sqs:us-east-1:000000000000:my-queue" : protocol === "lambda" ? "arn:aws:lambda:us-east-1:000000000000:function:my-function" : "https://example.com/hook"}
+          placeholder={protocol === "sqs" ? `arn:aws:sqs:${region}:${placeholderAccount}:my-queue` : protocol === "lambda" ? `arn:aws:lambda:${region}:${placeholderAccount}:function:my-function` : "https://example.com/hook"}
           description={protocol === "sqs" ? "ARN of the queue that receives the messages." : protocol === "lambda" ? "ARN of the function invoked for each message." : undefined}
           suggestions={suggestions}
           error={errors.endpoint?.message}

@@ -12,8 +12,9 @@ import (
 	"github.com/aws/smithy-go/middleware"
 
 	"github.com/edermanoel94/aws-local-console/backend/internal/audit"
-	awsfloci "github.com/edermanoel94/aws-local-console/backend/internal/aws"
+	consoleaws "github.com/edermanoel94/aws-local-console/backend/internal/aws"
 	"github.com/edermanoel94/aws-local-console/backend/internal/coverage"
+	"github.com/edermanoel94/aws-local-console/backend/internal/environments"
 	"github.com/edermanoel94/aws-local-console/backend/internal/services"
 )
 
@@ -67,6 +68,7 @@ func newResolveError(kind error, format string, args ...any) error {
 
 // Engine executes operations and records coverage and audit data.
 type Engine struct {
+	target        environments.Target
 	registry      *services.Registry
 	catalog       *Catalog
 	coverage      *coverage.Tracker
@@ -76,8 +78,8 @@ type Engine struct {
 }
 
 // NewEngine wires the engine.
-func NewEngine(registry *services.Registry, catalog *Catalog, tracker *coverage.Tracker, store *audit.Store, defaultRegion string, logger *slog.Logger) *Engine {
-	return &Engine{registry: registry, catalog: catalog, coverage: tracker, audit: store, defaultRegion: defaultRegion, logger: logger}
+func NewEngine(target environments.Target, registry *services.Registry, catalog *Catalog, tracker *coverage.Tracker, store *audit.Store, defaultRegion string, logger *slog.Logger) *Engine {
+	return &Engine{target: target, registry: registry, catalog: catalog, coverage: tracker, audit: store, defaultRegion: defaultRegion, logger: logger}
 }
 
 // Catalog returns the operation catalog.
@@ -161,9 +163,9 @@ func (e *Engine) run(ctx context.Context, def *services.Definition, op *Operatio
 
 	ctx, cancel := context.WithTimeout(ctx, callTimeout)
 	defer cancel()
-	recorder := &awsfloci.Recorder{}
+	recorder := &consoleaws.Recorder{}
 	var metadata middleware.Metadata
-	output, callErr := op.call(ctx, e.registry.Client(def, region), inputValue, awsfloci.CaptureOption(recorder))
+	output, callErr := op.call(ctx, e.registry.Client(def, region), inputValue, consoleaws.CaptureOption(recorder))
 	wire := recorder.Exchange()
 	result.Request.Method = wire.Method
 	result.Request.URL = wire.URL
@@ -174,7 +176,7 @@ func (e *Engine) run(ctx context.Context, def *services.Definition, op *Operatio
 	result.RequestID = wire.RequestID
 
 	if callErr != nil {
-		classified := classifyError(callErr, wire)
+		classified := classifyError(callErr, wire, e.target)
 		if classified.httpStatus != 0 {
 			result.HTTPStatus = classified.httpStatus
 		}

@@ -1,0 +1,40 @@
+# AWS Local Console against a real AWS account: only the console, no Floci.
+#
+#   docker compose -f compose.aws.yaml up -d --wait     # published image
+#   make up-aws                                         # image built from this checkout
+#   open http://localhost:4500
+#
+# The console operates the single AWS account of the credentials below, with
+# the AWS SDK default credential chain, in this order:
+#   1. AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY (+ AWS_SESSION_TOKEN) from your shell
+#   2. AWS_PROFILE (or the default profile) from ~/.aws, mounted read only:
+#      static keys, assume role, credential_process or SSO
+#      (run `aws sso login` on the host first; the console cannot open a browser)
+# The region comes from AWS_REGION, AWS_DEFAULT_REGION or the profile.
+# Variables that are not set in your shell are not passed to the container.
+#
+# Settings (environment variables or an .env file next to this file):
+#   WEB_PORT       host port of the console (default 4500)
+#   AWS_CONFIG_DIR directory mounted as ~/.aws (default $HOME/.aws)
+#   CONSOLE_IMAGE  console image (default edercosta/aws-local-console:latest)
+
+name: aws-local-console-aws
+
+services:
+  console:
+    image: ${CONSOLE_IMAGE:-edercosta/aws-local-console:latest}
+    # The container exits if its API process dies; come back automatically.
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-4500}:4500"
+    environment:
+      - CONSOLE_TARGET=aws
+      - AWS_ACCESS_KEY_ID
+      - AWS_SECRET_ACCESS_KEY
+      - AWS_SESSION_TOKEN
+      - AWS_PROFILE
+      - AWS_REGION
+      - AWS_DEFAULT_REGION
+    volumes:
+      # The image runs as the `node` user (uid 1000): the files must be readable by that uid.
+      - ${AWS_CONFIG_DIR:-${HOME}/.aws}:/home/node/.aws:ro

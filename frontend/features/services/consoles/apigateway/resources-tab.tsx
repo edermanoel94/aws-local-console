@@ -8,9 +8,10 @@ import { Plus } from "lucide-react";
 import { Badge, Button, Dialog, EmptyState, ErrorAlert, Loading, Panel, SelectField, TextAreaField, TextField } from "@/components/ui";
 import { cn } from "@/lib/cn";
 import { useRegion } from "@/hooks/use-region";
+import { useTarget } from "@/hooks/use-queries";
 import { useQuery } from "@tanstack/react-query";
 import { api, OperationError } from "@/lib/api";
-import { CONSOLE_KEY, nameFromArn, useAwsQuery, useConsoleAction } from "../_shared/aws";
+import { CONSOLE_KEY, grantLambdaInvoke, nameFromArn, useAwsQuery, useConsoleAction } from "../_shared/aws";
 import { ConfirmDialog, RadioCards } from "../_shared/controls";
 import { prettyJson } from "../_shared/format";
 import { DetailsGrid, SectionTitle } from "../_shared/layout";
@@ -370,6 +371,7 @@ type MethodValues = z.infer<typeof methodSchema>;
 
 function CreateMethodDialog({ apiId, resource, existing, onClose }: { apiId: string; resource: ApiResource; existing: string[]; onClose: () => void }) {
   const region = useRegion();
+  const { isAws, accountId } = useTarget();
   const functions = useFunctionOptions();
   const available = HTTP_METHODS.filter((m) => !existing.includes(m));
   const form = useForm<MethodValues>({
@@ -384,17 +386,12 @@ function CreateMethodDialog({ apiId, resource, existing, onClose }: { apiId: str
       await exec("apigateway", "PutMethod", { ...base, AuthorizationType: "NONE" });
       if (v.integration === "AWS_PROXY") {
         await exec("apigateway", "PutIntegration", { ...base, Type: "AWS_PROXY", IntegrationHttpMethod: "POST", Uri: lambdaIntegrationUri(region, v.functionArn) });
-        try {
-          await exec("lambda", "AddPermission", {
-            FunctionName: v.functionArn,
-            StatementId: `apigateway-${apiId}-${v.httpMethod}-${resource.Id}-${Date.now()}`.slice(0, 100),
-            Action: "lambda:InvokeFunction",
-            Principal: "apigateway.amazonaws.com",
-            SourceArn: executeApiArn(region, apiId, v.httpMethod, resource.Path),
-          });
-        } catch {
-          // Resource-based policies are optional on Floci; the integration works without them.
-        }
+        await grantLambdaInvoke(exec, isAws, {
+          FunctionName: v.functionArn,
+          StatementId: `apigateway-${apiId}-${v.httpMethod}-${resource.Id}-${Date.now()}`.slice(0, 100),
+          Principal: "apigateway.amazonaws.com",
+          SourceArn: executeApiArn(region, accountId, apiId, v.httpMethod, resource.Path),
+        });
       } else if (v.integration === "MOCK") {
         await exec("apigateway", "PutIntegration", { ...base, Type: "MOCK", RequestTemplates: { "application/json": JSON.stringify({ statusCode: Number(v.statusCode) }) } });
         await exec("apigateway", "PutMethodResponse", { ...base, StatusCode: v.statusCode });

@@ -1,4 +1,4 @@
-// Package resources discovers the resources that exist in Floci (buckets,
+// Package resources discovers the resources that exist in the target (buckets,
 // queues, topics, tables, functions, APIs, buses, rules, log groups, roles)
 // and filters them for the Resource Explorer.
 package resources
@@ -87,10 +87,10 @@ func formatTime(t *time.Time) string {
 // discoverFunc lists the resources of one service in the given regions.
 type discoverFunc func(ctx context.Context, d *Discoverer, regions []string) ([]Resource, error)
 
-// Discoverer lists resources from Floci.
+// Discoverer lists resources from the target.
 type Discoverer struct {
 	registry *services.Registry
-	account  string
+	account  func() string
 	regions  []string
 	logger   *slog.Logger
 	byID     map[string]discoverFunc
@@ -98,7 +98,9 @@ type Discoverer struct {
 
 // NewDiscoverer returns a discoverer; regions are the regions scanned when a
 // query does not name one.
-func NewDiscoverer(registry *services.Registry, account string, regions []string, logger *slog.Logger) *Discoverer {
+// account returns the target's account id, used to build ARNs that list
+// operations do not return.
+func NewDiscoverer(registry *services.Registry, account func() string, regions []string, logger *slog.Logger) *Discoverer {
 	return &Discoverer{
 		registry: registry,
 		account:  account,
@@ -119,8 +121,8 @@ func NewDiscoverer(registry *services.Registry, account string, regions []string
 	}
 }
 
-// Account returns the Floci account id.
-func (d *Discoverer) Account() string { return d.account }
+// Account returns the target's account id.
+func (d *Discoverer) Account() string { return d.account() }
 
 // Registry returns the service registry.
 func (d *Discoverer) Registry() *services.Registry { return d.registry }

@@ -5,6 +5,8 @@ import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button, Dialog, ErrorAlert, SelectField, TextField } from "@/components/ui";
+import { useTarget } from "@/hooks/use-queries";
+import { useRegion } from "@/hooks/use-region";
 import { useAwsQuery, useConsoleAction } from "../_shared/aws";
 import { ConfirmDialog, CopyableText, RemoveIconButton } from "../_shared/controls";
 import { formatDateTime } from "../_shared/format";
@@ -17,6 +19,8 @@ export function useStages(apiId: string) {
 
 export function StagesTab({ apiId }: { apiId: string }) {
   const stages = useStages(apiId);
+  const { target } = useTarget();
+  const region = useRegion();
   const deployments = useAwsQuery<{ Items?: Deployment[] | null }>("apigateway", "GetDeployments", { RestApiId: apiId });
   const [removing, setRemoving] = useState<Stage | null>(null);
   const remove = useConsoleAction<Stage>({
@@ -42,7 +46,7 @@ export function StagesTab({ apiId }: { apiId: string }) {
         emptyDescription="Choose Deploy API to create a stage."
         columns={[
           { header: "Stage", cell: (s) => <span className="font-bold">{s.StageName}</span> },
-          { header: "Invoke URL", cell: (s) => <CopyableText value={stageUrl(apiId, s.StageName)} label={`Copy invoke URL of ${s.StageName}`} /> },
+          { header: "Invoke URL", cell: (s) => <CopyableText value={stageUrl(target, region, apiId, s.StageName)} label={`Copy invoke URL of ${s.StageName}`} /> },
           { header: "Deployment", cell: (s) => <span className="font-mono text-xs">{s.DeploymentId ?? "-"}</span> },
           { header: "Last updated", cell: (s) => formatDateTime(s.LastUpdatedDate ?? s.CreatedDate), className: "whitespace-nowrap" },
           { header: "Actions", className: "w-px text-right", cell: (s) => <RemoveIconButton label={`Delete stage ${s.StageName}`} onClick={() => setRemoving(s)} /> },

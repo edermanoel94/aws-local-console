@@ -58,7 +58,7 @@ RUN mkdir -p public && corepack install && pnpm build
 FROM node:${NODE_VERSION}-alpine AS runtime
 ARG VERSION
 LABEL org.opencontainers.image.title="AWS Local Console" \
-      org.opencontainers.image.description="Web console to explore and operate AWS services running on Floci (Go API + Next.js)" \
+      org.opencontainers.image.description="Web console to explore and operate AWS services on Floci or a real AWS account (Go API + Next.js)" \
       org.opencontainers.image.licenses="MIT" \
       org.opencontainers.image.source="https://github.com/edermanoel94/aws-local-console" \
       org.opencontainers.image.version="${VERSION}"
@@ -67,10 +67,9 @@ ENV NODE_ENV=production \
     HOSTNAME=0.0.0.0 \
     PORT=4500 \
     API_PORT=8080 \
-    FLOCI_ENDPOINT=http://floci:4566 \
-    AWS_REGION=us-east-1 \
-    AWS_ACCESS_KEY_ID=test \
-    AWS_SECRET_ACCESS_KEY=test
+    FLOCI_ENDPOINT=http://floci:4566
+# No AWS_* defaults here: with CONSOLE_TARGET=aws they would shadow the real
+# credentials and region. The API defaults them itself for Floci (test/test, us-east-1).
 WORKDIR /app
 COPY --from=api-build /out/api /app/bin/api
 # The official node image ships an unprivileged `node` user (uid 1000).

@@ -2,6 +2,7 @@
 
 A web console to explore and operate AWS services running locally on [Floci](https://hub.docker.com/r/floci/floci), with an interface inspired by the AWS Management Console.
 No AWS account needed: everything runs on your machine.
+It can also operate a real AWS account with the credentials of its environment.
 
 - **Services and consoles** for S3, SQS, SNS, DynamoDB, Lambda, API Gateway and EventBridge: create, inspect, edit and delete resources.
 - **API Explorer**: run any AWS SDK operation and inspect the raw request, response, headers and request id.
@@ -88,6 +89,22 @@ docker run -d -p 4500:4500 \
   edercosta/aws-local-console
 ```
 
+## Real AWS account
+
+With `CONSOLE_TARGET=aws` the console operates the single AWS account of its credentials, through the AWS SDK default chain (environment variables, or a profile of the mounted `~/.aws`, including SSO after `aws sso login` on the host):
+
+```bash
+docker run -d -p 4500:4500 \
+  -e CONSOLE_TARGET=aws \
+  -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY -e AWS_SESSION_TOKEN -e AWS_PROFILE -e AWS_REGION \
+  -v "$HOME/.aws:/home/node/.aws:ro" \
+  edercosta/aws-local-console
+```
+
+The region comes from `AWS_REGION`, `AWS_DEFAULT_REGION` or the profile.
+Every action is a real, billed AWS call with the permissions of the credentials.
+The repository also ships [`compose.aws.yaml`](https://github.com/edermanoel94/aws-local-console/blob/main/compose.aws.yaml) for this mode.
+
 ## Configuration
 
 Set these in the shell or in an `.env` file next to `compose.yaml`, e.g. `FLOCI_STORAGE_MODE=persistent docker compose up -d --wait`.
@@ -96,8 +113,9 @@ Set these in the shell or in an `.env` file next to `compose.yaml`, e.g. `FLOCI_
 |---|---|---|
 | `FLOCI_STORAGE_MODE` | `memory` | `memory` loses all resources on restart; `persistent` (or `hybrid`) keeps them in the `floci-data` volume (remove it with `docker compose down -v`) |
 | `FLOCI_ENDPOINT` | `http://floci:4566` | Floci URL used by the console, e.g. to point it at another Floci |
+| `CONSOLE_TARGET` | `floci` | `aws` to operate a real AWS account instead of Floci |
 
-The console assumes Floci's defaults: region `us-east-1` and account id `000000000000`.
+With Floci the console assumes Floci's defaults: region `us-east-1` and account id `000000000000`.
 The container runs as the unprivileged `node` user and has a healthcheck that is healthy only when both the web server and the API answer.
 If the API process stops, the container exits, so the restart policy brings it back.
 

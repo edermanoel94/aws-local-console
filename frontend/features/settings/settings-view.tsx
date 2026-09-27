@@ -5,7 +5,7 @@ import { useState, type ReactNode } from "react";
 import { api, API_BASE_PATH } from "@/lib/api";
 import { Badge, Button, ErrorAlert, Loading, Panel, SelectField } from "@/components/ui";
 import { PageHeader } from "@/components/layout/page-header";
-import { useFlociStatus, useRegions } from "@/hooks/use-queries";
+import { useRegions, useTargetStatus } from "@/hooks/use-queries";
 import { useRegion } from "@/hooks/use-region";
 import { useHydrated } from "@/hooks/use-hydrated";
 import { usePreferences } from "@/stores/preferences";
@@ -14,7 +14,6 @@ import { THEME_OPTIONS } from "@/lib/theme";
 import { RadioCards } from "@/features/services/consoles/_shared/controls";
 
 export function SettingsView() {
-  const floci = useFlociStatus();
   const health = useQuery({ queryKey: ["health"], queryFn: api.health, retry: 0 });
   const regions = useRegions();
   const hydrated = useHydrated();
@@ -41,31 +40,7 @@ export function SettingsView() {
         breadcrumbs={[{ label: "AWS Local Console", href: "/dashboard" }, { label: "Settings" }]}
       />
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-        <Panel title="Floci endpoint" description="Read only. Configured on the Go API with FLOCI_ENDPOINT.">
-          {floci.isPending ? (
-            <Loading />
-          ) : floci.isError ? (
-            <ErrorAlert error={floci.error} />
-          ) : (
-            <div className="flex flex-col gap-4">
-              <dl className="grid grid-cols-[9rem_1fr] gap-y-2.5 text-sm">
-                <Row label="Endpoint">
-                  <span className="font-mono text-[13px]">{floci.data.endpoint}</span>
-                </Row>
-                <Row label="Status">
-                  <Badge tone={floci.data.healthy ? "green" : "red"}>{floci.data.status}</Badge>
-                </Row>
-                <Row label="Version">{floci.data.version ?? "-"}</Row>
-                <Row label="Edition">{floci.data.edition ?? "-"}</Row>
-                <Row label="Latency">{floci.data.latencyMs}ms</Row>
-                <Row label="Account id">
-                  <span className="font-mono text-[13px]">000000000000</span>
-                </Row>
-              </dl>
-              {floci.data.services.length > 0 && <FlociServices services={floci.data.services} />}
-            </div>
-          )}
-        </Panel>
+        <TargetPanel />
 
         <div className="flex flex-col gap-4">
           <Panel title="Go API" description="The browser reaches the Go API through the console server (API_INTERNAL_URL).">
@@ -151,6 +126,73 @@ export function SettingsView() {
         </div>
       </div>
     </>
+  );
+}
+
+/** Floci endpoint details, or the AWS account and identity the Go API credentials resolve to. */
+function TargetPanel() {
+  const status = useTargetStatus();
+  const aws = status.data?.target === "aws";
+  return (
+    <Panel
+      className="self-start"
+      title={status.data ? (aws ? "AWS account" : "Floci endpoint") : "Target"}
+      description={
+        aws
+          ? "Read only. The Go API uses the AWS credentials of its environment (AWS SDK default credential chain)."
+          : "Read only. Configured on the Go API with FLOCI_ENDPOINT."
+      }
+    >
+      {status.isPending ? (
+        <Loading />
+      ) : status.isError ? (
+        <ErrorAlert error={status.error} />
+      ) : (
+        <div className="flex flex-col gap-4">
+          <dl className="grid grid-cols-[9rem_1fr] gap-y-2.5 text-sm">
+            {aws ? (
+              <>
+                <Row label="Account id">
+                  <span className="font-mono text-[13px]">{status.data.accountId || "-"}</span>
+                </Row>
+                <Row label="Identity">
+                  <span className="font-mono text-[13px]">{status.data.identityArn ?? "-"}</span>
+                </Row>
+                <Row label="Credentials">{status.data.credentialSource ?? "-"}</Row>
+                <Row label="Default region">
+                  <span className="font-mono text-[13px]">{status.data.region}</span>
+                </Row>
+              </>
+            ) : (
+              <Row label="Endpoint">
+                <span className="font-mono text-[13px]">{status.data.endpoint}</span>
+              </Row>
+            )}
+            <Row label="Status">
+              <Badge tone={status.data.healthy ? "green" : "red"}>{status.data.status}</Badge>
+            </Row>
+            {!aws && (
+              <>
+                <Row label="Version">{status.data.version ?? "-"}</Row>
+                <Row label="Edition">{status.data.edition ?? "-"}</Row>
+              </>
+            )}
+            <Row label="Latency">{status.data.latencyMs}ms</Row>
+            {!aws && (
+              <Row label="Account id">
+                <span className="font-mono text-[13px]">{status.data.accountId}</span>
+              </Row>
+            )}
+            {status.data.error && (
+              <Row label="Error">
+                <span className="text-aws-red">{status.data.error}</span>
+              </Row>
+            )}
+          </dl>
+          {status.data.services.length > 0 && <FlociServices services={status.data.services} />}
+        </div>
+      )}
+    </Panel>
   );
 }
 

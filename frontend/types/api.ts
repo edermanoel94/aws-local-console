@@ -75,7 +75,7 @@ export interface ExecuteResponse {
   response: {
     output?: unknown;
     headers?: Record<string, string>;
-    /** Raw error body from Floci, only when httpStatus >= 400. */
+    /** Raw error body from Floci or AWS, only when httpStatus >= 400. */
     body?: string;
   };
   error?: ExecutionError;
@@ -150,14 +150,31 @@ export interface ArchitectureGraph {
   errors?: { service: string; message: string }[];
 }
 
-export interface FlociStatus {
-  endpoint: string;
+/** What the console operates: a local Floci emulator or a real AWS account. */
+export type TargetKind = "floci" | "aws";
+
+export interface TargetStatus {
+  target: TargetKind;
+  /** Display name: "Floci" or "AWS". */
+  name: string;
+  /** Floci endpoint as configured on the Go API (Floci only). */
+  endpoint?: string;
+  /** Default region of the Go API. */
+  region: string;
+  /** Floci: always 000000000000. AWS: account of the credentials, empty until they work. */
+  accountId: string;
+  /** AWS only: ARN of the caller identity (sts:GetCallerIdentity). */
+  identityArn?: string;
+  /** AWS only: SDK credentials provider, e.g. "EnvConfigCredentials" or "SSOProvider". */
+  credentialSource?: string;
   healthy: boolean;
-  status: "Healthy" | "Unreachable";
+  status: "Healthy" | "Unreachable" | "Unauthorized";
   version?: string;
   edition?: string;
+  /** Floci only: services reported by /_floci/health. */
   services: { id: string; status: string }[];
   latencyMs: number;
+  error?: string;
 }
 
 export interface DashboardSummary {
@@ -167,6 +184,8 @@ export interface DashboardSummary {
   regionCount: number;
   resourcesByService: { service: string; count: number }[];
   recentOperations: LogEntry[];
+  /** Resource discovery failures (e.g. AWS credentials without permission). */
+  errors: { service: string; message: string }[];
 }
 
 export interface CliResult {
@@ -181,7 +200,7 @@ export interface ApiErrorBody {
   error: { code: string; message: string };
 }
 
-// POST /api/v1/apigateway/invoke - proxies a request to a deployed REST API stage on Floci.
+// POST /api/v1/apigateway/invoke - proxies a request to a deployed REST API stage.
 export interface ApiGatewayInvokeRequest {
   restApiId: string;
   stage: string;

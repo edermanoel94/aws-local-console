@@ -9,7 +9,7 @@ export default function CliPage() {
     <>
       <PageHeader
         title="CLI"
-        description="Run AWS CLI style commands (aws <service> <command> --flag value) against Floci. Every command is audited in Logs."
+        description="Run AWS CLI style commands (aws <service> <command> --flag value) through the Go API. Every command is audited in Logs."
         breadcrumbs={[{ label: "AWS Local Console", href: "/dashboard" }, { label: "CLI" }]}
       />
       <CliConsole />

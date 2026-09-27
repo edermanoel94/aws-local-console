@@ -58,7 +58,7 @@ export function InvokeTab({ apiId }: { apiId: string }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <Panel title="Invoke API" description="Send an HTTP request to a deployed stage. The request goes through the AWS Local Console API to Floci.">
+      <Panel title="Invoke API" description="Send an HTTP request to a deployed stage. The request goes through the AWS Local Console API to the stage invoke URL.">
         {stageNames.length === 0 ? (
           <EmptyState title="No stages" description="Choose Deploy API to deploy the API to a stage before invoking it." />
         ) : (

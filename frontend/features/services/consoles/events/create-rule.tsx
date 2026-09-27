@@ -12,6 +12,7 @@ import { useConsoleNav } from "../_shared/nav";
 import { DEFAULT_BUS, PATTERN_TEMPLATES, type TargetType } from "./events-types";
 import { useEventBuses } from "./rule-list";
 import { addTarget, TargetFields } from "./targets";
+import { useTarget } from "@/hooks/use-queries";
 
 const DEFAULT_PATTERN = JSON.stringify(PATTERN_TEMPLATES[1].pattern, null, 2);
 
@@ -49,6 +50,7 @@ type FormValues = z.infer<typeof schema>;
 export function CreateRulePage() {
   const { prefix, navigate } = useConsoleNav();
   const buses = useEventBuses();
+  const { isAws } = useTarget();
   const [template, setTemplate] = useState("");
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -66,7 +68,7 @@ export function CreateRulePage() {
         ...(v.description ? { Description: v.description } : {}),
         ...(v.kind === "pattern" ? { EventPattern: JSON.stringify(JSON.parse(v.pattern)) } : { ScheduleExpression: v.schedule }),
       });
-      if (v.targetArn) await addTarget(exec, { name: v.name, bus: v.bus, arn: RuleArn }, v.targetArn, []);
+      if (v.targetArn) await addTarget(exec, { name: v.name, bus: v.bus, arn: RuleArn }, v.targetArn, [], isAws);
     },
     successMessage: (v) => `Rule ${v.name} created`,
     onSuccess: (_, v) => navigate({ resource: v.name, prefix: v.bus === DEFAULT_BUS ? null : v.bus }),
