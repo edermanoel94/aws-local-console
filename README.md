@@ -125,7 +125,8 @@ docker run -d --name aws-local-console -p 4500:4500 \
 | `FLOCI_STORAGE_MODE` (Floci) | `memory` | `memory` loses all resources on restart; `persistent` (or `hybrid`) keeps them in `/app/data` |
 
 The console works however it is opened (localhost, 127.0.0.1, a LAN IP, a tunnel or another device), with no extra setup.
-Pin a version such as `edercosta/aws-local-console:0.1.4` instead of `latest` for reproducible setups, or use `edge` to follow the `main` branch with the features that are not released yet.
+Pin a version from the [releases](https://github.com/edermanoel94/aws-local-console/releases) (e.g. `edercosta/aws-local-console:0.1.5`) instead of `latest` for reproducible setups, or use `edge` to follow the `main` branch with the features that are not released yet.
+Releases are cut automatically when changes that affect the console land on `main`.
 The Docker Hub page text lives in [`docker/README.dockerhub.md`](docker/README.dockerhub.md).
 
 ## Requirements

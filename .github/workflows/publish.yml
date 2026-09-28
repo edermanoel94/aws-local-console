@@ -1,12 +1,22 @@
 name: Publish
 
-# Runs the full E2E suite and, only if it passes, publishes the multi-arch
+# Runs the full E2E suite and, only if it passes, releases and publishes the multi-arch
 # (linux/amd64, linux/arm64) image with the Go API and the web console to Docker Hub:
 #
-#   push to main       -> edercosta/aws-local-console:edge
-#   push of tag v1.2.3 -> edercosta/aws-local-console:{1.2.3,1.2,latest}
+#   push to main       -> edercosta/aws-local-console:edge, and a release when the commits
+#                         since the last one call for it (see below):
+#                         git tag v1.2.3, GitHub release and image tags {1.2.3,1.2,latest}
+#   push of tag v1.2.3 -> edercosta/aws-local-console:{1.2.3,1.2,latest} (manual re-publish)
 #
-# `latest` only moves on version tags, so it always points at a release.
+# Releases are cut by semantic-release (.releaserc.json) from Conventional Commits:
+#   fix, perf, feat                          -> patch (0.1.5 -> 0.1.6)
+#   breaking change (`feat!:`, BREAKING CHANGE) -> minor (0.1.5 -> 0.2.0)
+#   docs, ci, chore, refactor, test, others   -> no release (only edge)
+#
+# The tag and a draft GitHub release are created first, the image is pushed with that
+# version, and only then is the release published, so a visible release always has its
+# image. If the image push fails, re-running the failed jobs finishes the release.
+# `latest` only moves on releases, so it always points at one.
 #
 # Repository secrets required:
 #   DOCKERHUB_USERNAME  Docker Hub user (edercosta)
@@ -17,26 +27,68 @@ on:
     branches: [main]
     tags: ["v*.*.*"]
 
-# One run per ref. On main a newer push cancels the older run, so `edge` can never
-# be overwritten by an older commit; version tags always run to completion.
+# One run per ref, in push order. Runs are never cancelled halfway, so a release is
+# never left with a tag but no image; a push that arrives while a run is in progress
+# waits for it (and replaces any older pending run), so `edge` can never be overwritten
+# by an older commit.
 concurrency:
   group: publish-${{ github.ref }}
-  cancel-in-progress: ${{ github.ref_type == 'branch' }}
+  cancel-in-progress: false
 
 permissions:
   contents: read
 
 env:
   IMAGE: edercosta/aws-local-console
+  COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
 
 jobs:
   e2e:
     name: E2E
     uses: ./.github/workflows/e2e.yml
 
+  release:
+    name: Release
+    needs: e2e
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write # push the tag and create the release
+    outputs:
+      version: ${{ steps.semantic-release.outputs.version }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # semantic-release reads the commits since the last tag
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Enable corepack (pnpm version from packageManager)
+        run: corepack enable pnpm && pnpm --version
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Sets the `version` output only when a release was created. If main moved on
+      # meanwhile, semantic-release skips the release and the next run cuts it.
+      # A tag pushed with GITHUB_TOKEN does not trigger this workflow again.
+      - name: Create tag and draft release
+        id: semantic-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: pnpm exec semantic-release
+
   publish:
     name: Publish image
-    needs: e2e
+    needs: [e2e, release]
+    # release is skipped on tag pushes.
+    if: ${{ !cancelled() && needs.e2e.result == 'success' && contains(fromJSON('["success", "skipped"]'), needs.release.result) }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -54,19 +106,21 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      # The semver tags come from the release version on main, or from the pushed tag
+      # when the value is empty.
       - name: Image metadata (tags and OCI labels)
         id: meta
         uses: docker/metadata-action@v6
         with:
           images: ${{ env.IMAGE }}
-          # latest is set explicitly (tags only) instead of relying on flavor defaults.
+          # latest is set explicitly (releases only) instead of relying on flavor defaults.
           flavor: |
             latest=false
           tags: |
             type=edge,branch=main
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+            type=semver,pattern={{version}},value=${{ needs.release.outputs.version }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ needs.release.outputs.version }}
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') || needs.release.outputs.version != '' }}
           labels: |
             org.opencontainers.image.title=AWS Local Console
             org.opencontainers.image.licenses=MIT
@@ -95,3 +149,22 @@ jobs:
             echo
             while IFS= read -r tag; do printf -- '- %s\n' "$tag"; done <<< "$TAGS"
           } >> "$GITHUB_STEP_SUMMARY"
+
+  publish-release:
+    name: Publish release
+    needs: [release, publish]
+    if: needs.release.outputs.version != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write # publish the draft release
+
+    steps:
+      - name: Publish the draft release as latest
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          TAG: v${{ needs.release.outputs.version }}
+        run: |
+          gh release edit "$TAG" --draft=false --latest
+          echo "### Released [${TAG}](${GITHUB_SERVER_URL}/${GH_REPO}/releases/tag/${TAG})" >> "$GITHUB_STEP_SUMMARY"
