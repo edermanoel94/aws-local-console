@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { uniqueName } from "../support/names";
 import { cleanup } from "../support/cleanup";
+import { copyToClipboard } from "../support/clipboard";
 import { consolePanel, deleteWithConfirmation, expectSuccess, openConsole, openTab, row } from "../support/console";
 
 /** SPEC 17 (DynamoDB) and SPEC 48 scenario 3, through the DynamoDB console. */
@@ -107,6 +108,7 @@ test.describe("DynamoDB console", () => {
     let dialog = await openItem(page, "c-1", "o-2");
     await expect(dialog.getByLabel("Item", { exact: true })).toHaveValue(/"amount": 25/);
     await expect(dialog.getByLabel("Item", { exact: true })).toHaveValue(/"status": "NEW"/);
+    expect(JSON.parse(await copyToClipboard(dialog))).toEqual({ customerId: "c-1", orderId: "o-2", status: "NEW", amount: 25 });
     await dialog.getByRole("button", { name: "Cancel" }).click();
     await expect(dialog).toBeHidden();
 

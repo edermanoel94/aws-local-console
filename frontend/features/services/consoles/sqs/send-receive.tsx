@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { ChevronDown, ChevronRight, Trash2 } from "lucide-react";
-import { Button, EmptyState, ErrorAlert, Panel, Table, Td, TextAreaField, TextField, Th, Tr } from "@/components/ui";
+import { Button, CodeBlock, EmptyState, ErrorAlert, Panel, Table, Td, TextAreaField, TextField, Th, Tr } from "@/components/ui";
 import { cn } from "@/lib/cn";
 import { useConsoleAction } from "../_shared/aws";
 import { KeyValueEditor, type KeyValue } from "../_shared/controls";
@@ -254,9 +254,7 @@ function MessageDetails({ message }: { message: SqsMessage }) {
     <div className="grid gap-4 lg:grid-cols-2">
       <div className="min-w-0">
         <p className="mb-1 text-sm font-bold">Body</p>
-        <pre aria-label="Message body content" className="max-h-80 overflow-auto rounded-lg border border-aws-border bg-aws-surface p-3 font-mono text-xs whitespace-pre-wrap">
-          {prettyJson(message.Body)}
-        </pre>
+        <CodeBlock text={prettyJson(message.Body)} label="Message body content" className="max-h-80 bg-aws-surface leading-normal break-all whitespace-pre-wrap" />
       </div>
       <div className="flex min-w-0 flex-col gap-3 text-xs">
         <div>

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Plus } from "lucide-react";
-import { Button, ConfirmDeleteDialog, Dialog, ErrorAlert, Loading, Panel } from "@/components/ui";
+import { Button, CodeBlock, ConfirmDeleteDialog, Dialog, ErrorAlert, Loading, Panel } from "@/components/ui";
 import { nameFromArn, useAwsQuery, useConsoleAction } from "../_shared/aws";
 import { ConfirmDialog, CopyableText, RemoveIconButton } from "../_shared/controls";
 import { prettyJson } from "../_shared/format";
@@ -79,9 +79,10 @@ export function RuleDetail({ ruleName }: { ruleName: string }) {
             />
           </Panel>
           <Panel title={rule.data.ScheduleExpression ? "Schedule" : "Event pattern"}>
-            <pre aria-label={rule.data.ScheduleExpression ? "Schedule expression" : "Event pattern JSON"} className="max-h-80 overflow-auto rounded-lg border border-aws-border bg-aws-panel p-3 font-mono text-xs whitespace-pre-wrap">
-              {rule.data.ScheduleExpression ?? prettyJson(rule.data.EventPattern ?? "")}
-            </pre>
+            <CodeBlock
+              text={rule.data.ScheduleExpression ?? prettyJson(rule.data.EventPattern ?? "")}
+              label={rule.data.ScheduleExpression ? "Schedule expression" : "Event pattern JSON"}              className="max-h-80 leading-normal whitespace-pre-wrap"
+            />
           </Panel>
         </>
       )}

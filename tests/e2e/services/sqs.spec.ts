@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { uniqueName } from "../support/names";
 import { cleanup } from "../support/cleanup";
+import { copyToClipboard } from "../support/clipboard";
 import { consolePanel, deleteWithConfirmation, expectSuccess, openConsole, openTab, row } from "../support/console";
 import { createQueueInConsole as createQueue } from "../support/sqs";
 
@@ -42,6 +43,7 @@ test.describe("SQS console", () => {
     // Message details expand inline.
     await message.getByRole("button", { expanded: false }).click();
     await expect(page.getByLabel("Message body content")).toContainText('"orderId": "A-1"');
+    expect(await copyToClipboard(page.getByRole("table", { name: "Received messages" }))).toBe('{\n  "orderId": "A-1"\n}');
 
     await message.getByRole("button", { name: "Delete message" }).click();
     await expectSuccess(page, /Message .* deleted/);

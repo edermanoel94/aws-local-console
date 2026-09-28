@@ -5,7 +5,7 @@ import { Controller, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Plus, Send } from "lucide-react";
-import { Badge, Button, ConfirmDeleteDialog, Dialog, ErrorAlert, Loading, Panel, SelectField, Tabs, TextAreaField } from "@/components/ui";
+import { Badge, Button, CodeBlock, ConfirmDeleteDialog, Dialog, ErrorAlert, Loading, Panel, SelectField, Tabs, TextAreaField } from "@/components/ui";
 import { useRegion } from "@/hooks/use-region";
 import { ACCOUNT_ID, useAwsLoader, useAwsQuery, useConsoleAction } from "../_shared/aws";
 import { Checkbox, ConfirmDialog, CopyableText, RemoveIconButton, SuggestField } from "../_shared/controls";
@@ -105,7 +105,7 @@ export function TopicDetail({ topicName }: { topicName: string }) {
                     <div key={k} className="grid gap-1 px-5 py-2 md:grid-cols-[280px_1fr]">
                       <dt className="text-sm text-aws-muted">{k}</dt>
                       <dd className="min-w-0 font-mono text-xs leading-5 break-all">
-                        {isJsonObject(v) ? <pre className="max-h-72 overflow-auto rounded-lg border border-aws-border bg-aws-panel p-3 whitespace-pre-wrap">{prettyJson(v)}</pre> : v || "-"}
+                        {isJsonObject(v) ? <CodeBlock text={prettyJson(v)} label={k} className="max-h-72 leading-5 whitespace-pre-wrap" /> : v || "-"}
                       </dd>
                     </div>
                   ))}
