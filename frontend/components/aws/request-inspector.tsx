@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { useState, type ReactNode } from "react";
-import { Clock, Copy, Check } from "lucide-react";
+import { Clock } from "lucide-react";
 import type { ExecuteResponse, ExecutionError, LogEntry } from "@/types/api";
 import { OperationError } from "@/lib/api";
-import { ErrorAlert, JsonView, Tabs } from "@/components/ui";
+import { CodeBlock, CopyButton, ErrorAlert, JsonView, Tabs } from "@/components/ui";
 import { cn } from "@/lib/cn";
 import { formatDateTime, formatDuration } from "@/lib/format";
 import { ExecutionStatusBadge } from "./status-badges";
@@ -141,9 +141,7 @@ export function RequestInspector({ execution: e, showLogLink = true, defaultTab 
               </Section>
               {e.response.body && (
                 <Section title="Raw error body">
-                  <pre aria-label="Raw error body" className="max-h-72 overflow-auto rounded-lg border border-aws-border bg-aws-panel p-3 font-mono text-xs whitespace-pre-wrap text-aws-ink">
-                    {e.response.body}
-                  </pre>
+                  <CodeBlock text={e.response.body} label="Raw error body" className="max-h-72 leading-normal whitespace-pre-wrap" />
                 </Section>
               )}
             </div>
@@ -204,26 +202,12 @@ function HeaderTable({ headers }: { headers?: Record<string, string> }) {
 }
 
 function CopyText({ text }: { text: string }) {
-  const [copied, setCopied] = useState(false);
   return (
     <span className="inline-flex max-w-full items-center gap-1">
       <span className="truncate font-mono text-[13px]" title={text}>
         {text}
       </span>
-      <button
-        type="button"
-        title="Copy"
-        aria-label="Copy request id"
-        onClick={() => {
-          navigator.clipboard?.writeText(text).then(() => {
-            setCopied(true);
-            setTimeout(() => setCopied(false), 1200);
-          });
-        }}
-        className="shrink-0 rounded p-0.5 text-aws-muted hover:bg-aws-panel hover:text-aws-ink"
-      >
-        {copied ? <Check className="size-3.5 text-aws-green" aria-hidden /> : <Copy className="size-3.5" aria-hidden />}
-      </button>
+      <CopyButton value={text} label="Copy request id" className="size-5" />
     </span>
   );
 }

@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { expect, test } from "@playwright/test";
 import { uniqueName } from "../support/names";
+import { copyToClipboard } from "../support/clipboard";
 import { consolePanel, deepCleanup, deleteWithConfirmation, expectSuccess, openConsole, openResource, openTab, row } from "../support/console";
 
 /**
@@ -108,6 +109,7 @@ test.describe("S3 console", () => {
     await expect(row(page, "Metadata", "x-amz-meta-author")).toContainText("e2e");
     await expect(row(page, "Metadata", "Content-Type")).toContainText("text/plain");
     await expect(page.getByLabel("Object content")).toHaveText("Hello from Playwright");
+    expect(await copyToClipboard(page.getByLabel("Object content").locator(".."))).toBe("Hello from Playwright");
 
     // Object tags.
     await consolePanel(page).getByRole("button", { name: "Manage tags" }).click();

@@ -1,6 +1,7 @@
 export * from "./badge";
 export * from "./button";
 export * from "./confirm-delete-dialog";
+export * from "./copy-button";
 export * from "./dialog";
 export * from "./error-alert";
 export * from "./field";

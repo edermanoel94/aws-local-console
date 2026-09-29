@@ -2,7 +2,7 @@
 
 import { Fragment, useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
-import { Badge, Button, Dialog, EmptyState, ErrorAlert, Loading, Panel, Table, Td, Th, Tr } from "@/components/ui";
+import { Badge, Button, Dialog, EmptyState, ErrorAlert, JsonView, Loading, Panel, Table, Td, Th, Tr } from "@/components/ui";
 import { cn } from "@/lib/cn";
 import { useAwsLoader, useConsoleAction, type Exec } from "../_shared/aws";
 import { ConfirmDialog, CopyableText, RadioCards, SegmentedControl } from "../_shared/controls";
@@ -338,9 +338,7 @@ function RecordImages({ record, format }: { record: StreamRecord; format: Format
         <div key={label} className="min-w-0">
           <p className="mb-1 text-sm font-bold">{label}</p>
           {item ? (
-            <pre aria-label={label} className="max-h-80 overflow-auto rounded-lg border border-aws-border bg-aws-surface p-3 font-mono text-xs whitespace-pre-wrap">
-              {JSON.stringify(format === "json" ? unmarshallItem(item) : item, null, 2)}
-            </pre>
+            <JsonView value={format === "json" ? unmarshallItem(item) : item} label={label} className="max-h-80 bg-aws-surface leading-normal whitespace-pre-wrap" />
           ) : (
             <p className="text-sm text-aws-muted">{record.EventName === "INSERT" && label === "Old image" ? "None: the item was created." : record.EventName === "REMOVE" && label === "New image" ? "None: the item was deleted." : "Not captured by this view type."}</p>
           )}

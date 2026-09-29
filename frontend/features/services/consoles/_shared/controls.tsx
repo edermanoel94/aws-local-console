@@ -1,8 +1,8 @@
 "use client";
 
 import { Fragment, forwardRef, useId, useRef, useState, type InputHTMLAttributes, type KeyboardEvent, type ReactNode } from "react";
-import { Check, Copy, Plus, X } from "lucide-react";
-import { Button, Dialog, ErrorAlert, TextField } from "@/components/ui";
+import { Plus, X } from "lucide-react";
+import { Button, COPY_CODE_LABEL, CopyButton, Dialog, ErrorAlert, TextField } from "@/components/ui";
 import { cn } from "@/lib/cn";
 
 type CheckboxProps = Omit<InputHTMLAttributes<HTMLInputElement>, "type"> & { label: string; description?: ReactNode };
@@ -61,7 +61,7 @@ export function RadioCards<T extends string>({
 }
 
 /**
- * Code editor field: monospace textarea with a line number gutter and Tab indentation.
+ * Code editor field: monospace textarea with a line number gutter, Tab indentation and a toolbar button that copies the content.
  * A native textarea keeps it accessible and scriptable (getByLabel("Function code").fill(...)).
  */
 export function CodeField({
@@ -106,12 +106,15 @@ export function CodeField({
       </label>
       {description && <p className="text-xs text-aws-muted">{description}</p>}
       <div className={cn("overflow-hidden rounded-lg border bg-aws-squid", error ? "border-aws-red" : "border-aws-border-strong focus-within:border-aws-link focus-within:ring-1 focus-within:ring-aws-link")}>
-        {fileName && (
-          <div className="flex items-center gap-2 border-b border-white/10 bg-aws-navy px-3 py-1.5 font-mono text-xs text-white/80">
-            <span className="size-2 rounded-full bg-aws-orange" aria-hidden />
-            {fileName}
-          </div>
-        )}
+        <div className="flex min-h-8 items-center gap-2 border-b border-white/10 bg-aws-navy py-1 pr-1.5 pl-3 font-mono text-xs text-white/80">
+          {fileName && (
+            <>
+              <span className="size-2 rounded-full bg-aws-orange" aria-hidden />
+              {fileName}
+            </>
+          )}
+          <CopyButton value={value} label={COPY_CODE_LABEL} className="ml-auto text-white/70 hover:bg-white/10 hover:text-white" />
+        </div>
         <div className="flex">
           <div
             ref={gutterRef}
@@ -233,29 +236,7 @@ export const SuggestField = forwardRef<HTMLInputElement, InputHTMLAttributes<HTM
   },
 );
 
-/** Copies text to the clipboard with a short check-mark confirmation. */
-export function CopyButton({ value, label }: { value: string; label: string }) {
-  const [copied, setCopied] = useState(false);
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      title={label}
-      onClick={async () => {
-        try {
-          await navigator.clipboard.writeText(value);
-          setCopied(true);
-          setTimeout(() => setCopied(false), 1500);
-        } catch {
-          // Clipboard access denied (e.g. insecure context); nothing else to do.
-        }
-      }}
-      className="inline-flex size-6 shrink-0 items-center justify-center rounded text-aws-muted hover:bg-aws-panel hover:text-aws-ink"
-    >
-      {copied ? <Check className="size-3.5 text-aws-green" aria-hidden /> : <Copy className="size-3.5" aria-hidden />}
-    </button>
-  );
-}
+export { CopyButton };
 
 /** Monospace value with a copy button (ARNs, URLs, ids). */
 /** ARNs and URLs wrap after ":" and "/" (never inside an account id); other long values wrap anywhere as a last resort. */

@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Badge, Button, EmptyState, ErrorAlert, Loading, Panel, SelectField, Table, Td, TextAreaField, Th, Tr } from "@/components/ui";
+import { Badge, Button, CodeBlock, EmptyState, ErrorAlert, Loading, Panel, SelectField, Table, Td, TextAreaField, Th, Tr } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useRegion } from "@/hooks/use-region";
 import type { ApiGatewayInvokeResponse } from "@/types/api";
@@ -110,9 +110,7 @@ function InvokeResponse({ response }: { response: ApiGatewayInvokeResponse }) {
         />
         <div>
           <p className="mb-1 text-sm font-bold">Response body</p>
-          <pre aria-label="Response body" className="max-h-96 overflow-auto rounded-lg border border-aws-border bg-aws-panel p-3 font-mono text-xs whitespace-pre-wrap">
-            {response.body ? prettyJson(response.body) : "(empty)"}
-          </pre>
+          <CodeBlock text={response.body ? prettyJson(response.body) : "(empty)"} label="Response body" className="max-h-96 leading-normal whitespace-pre-wrap" />
         </div>
         <div>
           <p className="mb-1 text-sm font-bold">Response headers</p>

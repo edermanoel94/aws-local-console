@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { useId, useMemo, useState, type ReactNode } from "react";
 import { AlignLeft, CheckCircle2, Code2, Type, XCircle } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { COPY_CODE_LABEL, CopyButton } from "@/components/ui";
 
 const MonacoJson = dynamic(() => import("./monaco-json"), { ssr: false, loading: () => null });
 
@@ -69,6 +70,7 @@ export function JsonEditor({ label, value, onChange, height = 280, readOnly, des
               <AlignLeft className="size-3.5" aria-hidden /> Format
             </button>
           )}
+          <CopyButton value={value} label={COPY_CODE_LABEL} className="size-7 rounded-md text-aws-link hover:text-aws-link" />
           <button
             type="button"
             onClick={() => setTextMode((t) => !t)}

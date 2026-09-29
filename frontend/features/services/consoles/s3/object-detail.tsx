@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Download } from "lucide-react";
-import { Button, ConfirmDeleteDialog, EmptyState, ErrorAlert, Loading, Panel, Table, Td, Th, Tr } from "@/components/ui";
+import { Button, CodeBlock, ConfirmDeleteDialog, EmptyState, ErrorAlert, Loading, Panel, Table, Td, Th, Tr } from "@/components/ui";
 import { useRegion } from "@/hooks/use-region";
 import { toDisplayError } from "@/lib/errors";
 import { toast } from "@/stores/toast";
@@ -132,9 +132,7 @@ export function ObjectDetail({ bucket, objectKey }: { bucket: string; objectKey:
           body.length === 0 ? (
             <EmptyState title="No content" description="This object is empty." />
           ) : (
-            <pre aria-label="Object content" className="max-h-[420px] overflow-auto rounded-lg border border-aws-border bg-aws-panel p-3 font-mono text-xs leading-relaxed whitespace-pre-wrap">
-              {prettyJson(body)}
-            </pre>
+            <CodeBlock text={prettyJson(body)} label="Object content" className="max-h-[420px] whitespace-pre-wrap" />
           )
         ) : (
           <EmptyState title="No text preview" description="This object contains binary data. Download the object to view it." />

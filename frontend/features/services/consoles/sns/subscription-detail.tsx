@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Badge, Button, Dialog, EmptyState, ErrorAlert, Loading, Panel, SelectField, TextAreaField, TextField } from "@/components/ui";
+import { Badge, Button, CodeBlock, Dialog, EmptyState, ErrorAlert, Loading, Panel, SelectField, TextAreaField, TextField } from "@/components/ui";
 import { useAwsLoader, useConsoleAction } from "../_shared/aws";
 import { Checkbox, ConfirmDialog, CopyableText, RadioCards } from "../_shared/controls";
 import { prettyJson } from "../_shared/format";
@@ -109,9 +109,7 @@ export function SubscriptionDetail({ topicName, subscriptionArn }: { topicName: 
             description={hasFilterPolicy(a.FilterPolicy) ? `Scope: ${SCOPES.find((s) => s.value === (a.FilterPolicyScope || "MessageAttributes"))?.label}.` : undefined}
           >
             {hasFilterPolicy(a.FilterPolicy) ? (
-              <pre aria-label="Filter policy" className="max-h-80 overflow-auto rounded-lg border border-aws-border bg-aws-panel p-3 font-mono text-xs whitespace-pre-wrap">
-                {prettyJson(a.FilterPolicy)}
-              </pre>
+              <CodeBlock text={prettyJson(a.FilterPolicy)} label="Filter policy" className="max-h-80 leading-normal whitespace-pre-wrap" />
             ) : (
               <EmptyState title="No filter policy" description="Every message published to the topic is delivered to this subscription." />
             )}

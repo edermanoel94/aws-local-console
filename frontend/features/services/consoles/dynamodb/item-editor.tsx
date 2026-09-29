@@ -208,7 +208,7 @@ function ItemForm({ table, original, onClose }: { table: TableDescription; origi
               ]}
             />
           </div>
-          <CodeField label="Item" value={text} onChange={setText} rows={14} error={parseError} />
+          <CodeField label="Item" value={text} onChange={setText} rows={14} error={parseError} fileName={format === "json" ? "item.json" : "item.dynamodb.json"} />
           {mutation.error && <ErrorAlert error={mutation.error} />}
         </div>
       </Dialog>

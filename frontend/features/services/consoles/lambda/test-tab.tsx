@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { CheckCircle2, XCircle } from "lucide-react";
-import { Button, ErrorAlert, Loading, Panel } from "@/components/ui";
+import { Button, CodeBlock, ErrorAlert, Loading, Panel } from "@/components/ui";
 import { cn } from "@/lib/cn";
 import { useAwsQuery, useConsoleAction } from "../_shared/aws";
 import { CodeField } from "../_shared/controls";
@@ -120,9 +120,7 @@ function ExecutionResult({ fn, result }: { fn: FunctionConfiguration; result: In
         />
         <div>
           <p className="mb-1 text-sm font-bold">Response</p>
-          <pre aria-label="Response payload" className="max-h-80 overflow-auto rounded-lg border border-aws-border bg-aws-panel p-3 font-mono text-xs whitespace-pre-wrap">
-            {payload ? prettyJson(payload) : "null"}
-          </pre>
+          <CodeBlock text={payload ? prettyJson(payload) : "null"} label="Response payload" className="max-h-80 leading-normal whitespace-pre-wrap" />
         </div>
         <div>
           <p className="mb-1 text-sm font-bold">Log output</p>

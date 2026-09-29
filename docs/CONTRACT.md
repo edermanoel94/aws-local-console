@@ -366,6 +366,8 @@ Rules every UI must follow:
 - The confirm dialog is a `role="dialog"`; delete confirmation requires typing the resource name in an input labeled `Type the name to confirm`.
 - Success feedback: a toast/alert with `role="status"` containing text like `Bucket playwright-x created`.
 - Error feedback: an element with `role="alert"` that contains the AWS error code and message (e.g. `BucketAlreadyOwnedByYou`), and for `errorKind === "unsupported"` the text `Floci Unsupported Operation` (distinct from `Application Error` for `errorKind === "application"`).
+- Read-only code/JSON blocks (message bodies, items, object content, policies, API responses) and code editors have a copy button named `Copy to clipboard`.
+  The name deliberately does not repeat the block label, so `getByLabel("Response body")` keeps matching only the block.
 - Tables are real `<table>` elements; each resource row contains the resource name as a link or text.
 - Loading states render an element with `role="progressbar"` or text `Loading`; empty states render text starting with `No ` (e.g. `No buckets`).
 - Tabs use `role="tablist"` / `role="tab"`.

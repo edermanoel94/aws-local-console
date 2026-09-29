@@ -5,7 +5,7 @@ import { Controller, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Plus } from "lucide-react";
-import { Badge, Button, Dialog, EmptyState, ErrorAlert, Loading, Panel, SelectField, TextAreaField, TextField } from "@/components/ui";
+import { Badge, Button, CodeBlock, Dialog, EmptyState, ErrorAlert, Loading, Panel, SelectField, TextAreaField, TextField } from "@/components/ui";
 import { cn } from "@/lib/cn";
 import { useRegion } from "@/hooks/use-region";
 import { useQuery } from "@tanstack/react-query";
@@ -270,7 +270,7 @@ function MethodDetail({ apiId, resource, httpMethod }: { apiId: string; resource
           {mockBody !== undefined && (
             <section aria-label="Mock response template">
               <SectionTitle>Mock response template</SectionTitle>
-              <pre className="max-h-60 overflow-auto rounded-lg border border-aws-border bg-aws-panel p-3 font-mono text-xs whitespace-pre-wrap">{prettyJson(mockBody)}</pre>
+              <CodeBlock text={prettyJson(mockBody)} className="max-h-60 leading-normal whitespace-pre-wrap" />
             </section>
           )}
         </div>
